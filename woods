@@ -1,0 +1,16 @@
+#!/bin/sh
+''':'
+exec python3 -OO "$0" "$@"
+'''
+
+from lib.cli import Cli
+
+def main():
+    """
+    Creates and hands over to CLI handler.
+    """
+    cli = Cli()
+    cli.run()
+
+if __name__ == '__main__':
+    main()
