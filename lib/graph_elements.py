@@ -4,35 +4,47 @@ All elements of a graph.
 
 from itertools import chain
 
-class Node(int):
+
+
+class Vertex(object):
   """
   A node in a graph.
   """
-  pass
 
-class Edge(object):
-  """
-  A(n undirected) edge in a graph.
+  def __init__(self, id, num_ports):
+    self.id = id
+    self.num_ports = num_ports
+    self._related = set()
 
-  For (hopefully) faster comparisons, we sort the associated nodes (a<=b).
-  """
+  def __hash__(self):
+    return self.id
 
-  def __init__(self, a, b):
-    assert isinstance(a, Node)
-    assert isinstance(b, Node)
-    self.a, self.b = (a, b) if a<b else (b, a)
+  def __lt__(self, other):
+    return self.id < other.id
+
+  def __eq__(self, other):
+    return self.id == other.id
+
+  def add_related(self, other):
+    assert isinstance(other, Vertex)
+    self._related.add(other)
+    other._related.add(self)
+    assert len(self._related) <= self.num_ports
+
+  @property
+  def related(self):
+    return self._related
 
 class GolfGraph(object):
   """
   A graph specifically crafted for
   `the graph golf challenge <http://research.nii.ac.jp/graphgolf/>`__.
   """
-  def __init__(self, order):
-    self.order = order
-    self.nodes = set(Node(i) for i in range(self.order))
-    self.edges = set()
 
-  def add_edge(self, a, b):
-    assert 0<=a and a<=self.order
-    assert 0<=b and b<=self.order
-    self.edges.append(Node(a), Node(b))
+  def __init__(self, order, degree):
+    self.order = order
+    self.degree = degree
+    self.vertices = [Vertex(i, degree) for i in range(order)]
+
+  def add_edge(self, vertex_a, vertex_b):
+    self.vertices[vertex_a.id].add_related(vertex_b)

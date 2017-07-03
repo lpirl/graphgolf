@@ -1,22 +1,33 @@
 from test import BaseTest
 
-from lib.graph_elements import GolfGraph, Node, Edge
+from lib.graph_elements import GolfGraph, Vertex
 
-class EdgeTest(BaseTest):
+class VertexTest(BaseTest):
     """
-    Tests class ``Edge``.
+    Tests class ``Vertex``.
     """
+
+    def setUp(self):
+        self.v1 = Vertex(1, 1)
+        self.v2 = Vertex(2, 1)
+        self.v3 = Vertex(3, 1)
 
     def test_order(self):
         """
         Tests whether nodes of edges are ordered.
         """
-        n1 = Node(1)
-        n2 = Node(2)
-        e1 = Edge(n1, n2)
-        e2 = Edge(n2, n1)
-        self.assertEqual(e1.a, e2.a)
-        self.assertEqual(e1.b, e2.b)
+        self.v1.add_related(self.v2)
+        self.assertNotEqual(self.v1, self.v2)
+        self.assertEqual(self.v1, self.v2.related.pop())
+
+    def test_num_ports(self):
+        """
+        Tests whether nodes of edges are ordered.
+        """
+        self.v1.add_related(self.v2)
+        with self.assertRaises(AssertionError):
+          self.v1.add_related(self.v3)
+
 
 class GolfGraphTest(BaseTest):
     """
@@ -25,17 +36,16 @@ class GolfGraphTest(BaseTest):
 
     def setUp(self):
         self.order = 32
-        self.graph = GolfGraph(self.order)
+        self.degree = 4
+        self.graph = GolfGraph(self.order, self.degree)
 
     def test_graph_creation(self):
         """
         Tests if all nodes are created correctly.
         """
 
-        # no initial edges
-        self.assertFalse(self.graph.edges)
-
         # all initial nodes
-        nodes = self.graph.nodes
-        for x in range(self.order):
-          self.assertIn(Node(x), nodes)
+        vertices = self.graph.vertices
+        degree = self.degree
+        for i in range(self.order):
+          self.assertIn(Vertex(i, degree), vertices)
