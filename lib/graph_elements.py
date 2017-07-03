@@ -25,7 +25,7 @@ class Vertex(object):
   def __eq__(self, other):
     return self.id == other.id
 
-  def add_related(self, other):
+  def add_related_bidirectional(self, other):
     assert isinstance(other, Vertex)
     self._related.add(other)
     other._related.add(self)
@@ -34,6 +34,8 @@ class Vertex(object):
   @property
   def related(self):
     return self._related
+
+
 
 class GolfGraph(object):
   """
@@ -47,4 +49,4 @@ class GolfGraph(object):
     self.vertices = [Vertex(i, degree) for i in range(order)]
 
   def add_edge(self, vertex_a, vertex_b):
-    self.vertices[vertex_a.id].add_related(vertex_b)
+    self.vertices[vertex_a.id].add_related_bidirectional(vertex_b)

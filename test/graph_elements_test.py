@@ -16,7 +16,7 @@ class VertexTest(BaseTest):
         """
         Tests whether nodes of edges are ordered.
         """
-        self.v1.add_related(self.v2)
+        self.v1.add_related_bidirectional(self.v2)
         self.assertNotEqual(self.v1, self.v2)
         self.assertEqual(self.v1, self.v2.related.pop())
 
@@ -24,9 +24,9 @@ class VertexTest(BaseTest):
         """
         Tests whether nodes of edges are ordered.
         """
-        self.v1.add_related(self.v2)
+        self.v1.add_related_bidirectional(self.v2)
         with self.assertRaises(AssertionError):
-          self.v1.add_related(self.v3)
+          self.v1.add_related_bidirectional(self.v3)
 
 
 class GolfGraphTest(BaseTest):
