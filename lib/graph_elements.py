@@ -15,7 +15,15 @@ class Vertex(object):
 
     def __init__(self, id):
         self.id = id
-        self.related = list()
+
+        self.breadcrumb = None
+        """
+        An attribute where non-recursive path finding algorithms can
+        store link to find their way back (i.e., to reconstruct the
+        path they went but didn't remember).
+        """
+
+        self.edges_to = list()
         self.__repr__ = self.__str__
 
     def __hash__(self):
@@ -40,6 +48,7 @@ class GolfGraph(object):
         self.order = order
         self.degree = degree
 
+        # ``list`` because needs fast iteration
         self.vertices = [Vertex(i) for i in range(order)]
 
     def add_edge_unsafe(self, vertex_a, vertex_b):
@@ -48,10 +57,10 @@ class GolfGraph(object):
         """
         assert vertex_a != vertex_b
         debug("wiring %s and %s", vertex_a, vertex_b)
-        vertex_a.related.append(vertex_b)
-        vertex_b.related.append(vertex_a)
-        assert len(vertex_a.related) <= self.degree
-        assert len(vertex_b.related) <= self.degree
+        vertex_a.edges_to.append(vertex_b)
+        vertex_b.edges_to.append(vertex_a)
+        assert len(vertex_a.edges_to) <= self.degree
+        assert len(vertex_b.edges_to) <= self.degree
 
     def can_add_edge(self, vertex_a, vertex_b):
         """
@@ -59,13 +68,13 @@ class GolfGraph(object):
         ``vertex_b`` would not violate any constraints.
         """
 
-        # do not make self-connections
+        # do not make self-edges_to
         if vertex_a == vertex_b:
             debug("constraints check: vertices are actually the same")
             return False
 
         degree = self.degree
-        vertex_a_related = vertex_a.related
+        vertex_a_related = vertex_a.edges_to
 
         # honor degree at vertex a
         if len(vertex_a_related) == degree:
@@ -74,12 +83,12 @@ class GolfGraph(object):
         assert len(vertex_a_related) < degree
 
         # honor degree at vertex b
-        if len(vertex_b.related) == degree:
+        if len(vertex_b.edges_to) == degree:
             debug("constraints check: vertex b has no ports left")
             return False
-        assert len(vertex_b.related) < degree
+        assert len(vertex_b.edges_to) < degree
 
-        # do not add connections that already exist
+        # do not add edges_to that already exist
         if vertex_b in vertex_a_related:
             debug("constraints check: vertices already connected")
             return False
@@ -100,7 +109,7 @@ class GolfGraph(object):
         """
         Adds random edges to the graph, to the maximum what
          ``self.degree`` allows.
-        This implementation targets graphs with no initial connections.
+        This implementation targets graphs with no initial edges_to.
         """
 
         def connect_vertex(vertex_a, vertices_b):
@@ -133,3 +142,42 @@ class GolfGraph(object):
                                                        vertices)
                 if i_connected_to:
                     vertices.pop(i_connected_to)
+
+    def shortest_path(self, vertex_a, vertex_b):
+        """
+        Returns the shortest path from ``vertex_a`` to ``vertex_b``.
+        Breadth-First search.
+        """
+
+        # ``set`` because needs fast lookup:
+        ever_enqueued = {vertex_a}
+
+        # ``list`` because this must be ordered
+        # (to not descend accidentally while doing breadth-first search):
+        currently_enqueued = [vertex_a]
+
+        # unset breadcrumb at departure vertex that might be left over
+        # previous searches
+        vertex_a.breadcrumb = None
+
+        # breadth-first walk the graph and lay breadcrumbs until the
+        # desired vertex is found
+        currently_visiting = None
+        while currently_enqueued:
+            currently_visiting = currently_enqueued.pop(0)
+            if currently_visiting == vertex_b:
+                break
+            for edge_to in currently_visiting.edges_to:
+                if edge_to not in ever_enqueued:
+                    edge_to.breadcrumb = currently_visiting
+                    ever_enqueued.add(edge_to)
+                    currently_enqueued.append(edge_to)
+
+        # follow back the breadcrumbs and remember the path this time
+        path = []
+        while currently_visiting is not None:
+            path.append(currently_visiting)
+            currently_visiting = currently_visiting.breadcrumb
+        path.reverse()
+
+        return path
