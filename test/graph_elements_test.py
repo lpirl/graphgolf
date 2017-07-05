@@ -137,3 +137,37 @@ class GolfGraphTest(BaseTest):
         for vertex_a_i, vertex_b_i in edges:
             edge = [vertices[vertex_a_i], vertices[vertex_b_i]]
             self.assertEqual(edge, graph.shortest_path(*edge))
+
+    def test_average_shortest_path_triangle(self):
+        """
+        Asserts shortest path computation for a 'triangle graph'.
+        """
+        graph = GolfGraph(3, 2)
+        vertices = graph.vertices
+        edges = ((0, 1), (1, 2), (2, 0))
+
+        # construct
+        for vertex_a_i, vertex_b_i in edges:
+            self.assertTrue(
+                graph.add_edge_pessimist(vertices[vertex_a_i],
+                                         vertices[vertex_b_i])
+                )
+
+        self.assertEqual(graph.average_shortes_path_length(), 1)
+
+    def test_average_shortest_path_rectangle(self):
+        """
+        Asserts shortest path computation for a 'triangle graph'.
+        """
+        graph = GolfGraph(4, 2)
+        vertices = graph.vertices
+        edges = ((0, 1), (1, 2), (2, 3), (3, 0))
+
+        # construct
+        for vertex_a_i, vertex_b_i in edges:
+            self.assertTrue(
+                graph.add_edge_pessimist(vertices[vertex_a_i],
+                                         vertices[vertex_b_i])
+                )
+
+        self.assertEqual(graph.average_shortes_path_length(), 4/3)

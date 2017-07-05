@@ -4,6 +4,7 @@ All elements of a graph.
 
 from logging import debug
 from random import shuffle
+from itertools import permutations
 
 
 
@@ -181,3 +182,26 @@ class GolfGraph(object):
         path.reverse()
 
         return path
+
+    def shortest_path_length(self, vertex_a, vertex_b):
+        """
+        Returns the shortest path length from ``vertex_a`` to ``vertex_b``.
+        """
+        return len(self.shortest_path(vertex_a, vertex_b)) - 1
+
+    def average_shortes_path_length(self):
+        """
+        Determines the average shortest path length between all vertices.
+
+        Instead of (d1 + d2 + ...) / n, we calculate
+        """
+        if not self.vertices:
+            raise RuntimeError(
+                "What is the average shortest path length of an empty graph?"
+            )
+        lengths_sum = 0
+        count = 0
+        for vertex_a, vertex_b in permutations(self.vertices, 2):
+            lengths_sum += self.shortest_path_length(vertex_a, vertex_b)
+            count += 1
+        return lengths_sum/count
