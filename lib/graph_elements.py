@@ -24,10 +24,10 @@ class Vertex(object):
     def __eq__(self, other):
         return self.id == other.id
 
-    def __repr__(self):
+    def __str__(self):
         return "V-%i" % self.id
 
-    def __str__(self):
+    def __repr__(self):
         return self.__repr__()
 
 class GolfGraph(object):
