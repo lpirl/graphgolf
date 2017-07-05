@@ -9,6 +9,8 @@ from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import logging
 
+from lib.graph_elements import GolfGraph
+
 class Cli(object):
     """
     Implements top-level coordination and interaction as CLI.
@@ -58,16 +60,16 @@ class Cli(object):
         )
 
     def _init_logging(self):
-        logging.getLogger().name = "fiad"
+        logging.getLogger().name = "woods"
         self.arg_parser.add_argument('-d', '--debug', action='store_true',
                                      default=False,
                                      help='turn on debug messages')
         self.arg_parser.add_argument('-v', '--verbose', action='store_true',
                                      default=False,
                                      help='turn on verbose messages')
-        self.arg_parser.add_argument('n', type=int,
+        self.arg_parser.add_argument('order', type=int,
                                      help="order of the graph")
-        self.arg_parser.add_argument('d', type=int,
+        self.arg_parser.add_argument('degree', type=int,
                                      help="degree of the graph")
 
     def run(self):
@@ -78,7 +80,12 @@ class Cli(object):
         logging.debug("starting to run")
 
         self._parse_args()
-        raise NotImplementedError()
+
+        # temporary
+        graph = GolfGraph(self.args.order, self.args.degree)
+        graph.add_as_many_random_edges_as_possible()
+
+        raise NotImplementedError
 
     def _parse_args(self):
         logging.debug("parsing command line arguments")
