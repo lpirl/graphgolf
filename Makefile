@@ -18,3 +18,6 @@ example:
 
 profile:
 	$(PY3_INTERPRETER) -OO -m cProfile  -s calls woods 256 18
+
+pylint:
+	pylint3 woods lib

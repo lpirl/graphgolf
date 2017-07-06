@@ -25,7 +25,6 @@ class Vertex(object):
         """
 
         self.edges_to = list()
-        self.__repr__ = self.__str__
 
     def __hash__(self):
         return self.id
@@ -127,13 +126,14 @@ class GolfGraph(object):
                     self.add_edge_unsafe(vertex_a, vertex_b)
                     break
 
-    def shortest_path(self, vertex_a, vertex_b):
+    @staticmethod
+    def shortest_path(vertex_a, vertex_b):
         """
         Returns the shortest path from ``vertex_a`` to ``vertex_b``.
         Breadth-First search.
         """
         debug("searching shortest path between %s and %s", vertex_a,
-             vertex_b)
+              vertex_b)
 
         # ``set`` because needs fast lookup:
         ever_enqueued = {vertex_a}
