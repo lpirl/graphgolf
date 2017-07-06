@@ -56,6 +56,14 @@ class GolfGraph(object):
         # ``list`` because needs fast iteration
         self.vertices = [Vertex(i) for i in range(order)]
 
+    def __str__(self):
+        bits = [
+            self.__class__.__name__, str(hex(id(self))),
+            "ASPL=%s" % self.average_shortest_path_length or "n/a",
+            "diameter=%s" % self.diameter or "n/a",
+        ]
+        return " ".join(bits)
+
     def add_edge_unsafe(self, vertex_a, vertex_b):
         """
         Adds an edge between the two given vertices w/o checking constraints.

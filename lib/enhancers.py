@@ -58,12 +58,10 @@ class AbstractBaseEnhancer(object):
         while True:
             current_graph = self.modify_graph(best_graph)
             current_graph.analzye()
-            if (current_graph.diameter < best_graph.diameter or
-                    (current_graph.average_shortest_path_length <
+            if (current_graph.diameter <= best_graph.diameter and
+                    (current_graph.average_shortest_path_length <=
                      best_graph.average_shortest_path_length)):
-                info("found a better graph: ASPL=%s, diameter=%s",
-                     current_graph.average_shortest_path_length,
-                     current_graph.diameter)
+                print(current_graph)
                 best_graph = current_graph
 
     @staticmethod
