@@ -2,7 +2,7 @@
 All elements of a graph.
 """
 
-from logging import debug, info
+from logging import debug
 from random import shuffle
 from itertools import combinations
 
@@ -46,9 +46,13 @@ class GolfGraph(object):
     """
 
     def __init__(self, order, degree):
-        info("initializing graph")
+        debug("initializing graph")
         self.order = order
         self.degree = degree
+
+        # to be filled by ``self.analyze()``
+        self.diameter = None
+        self.average_shortest_path_length = None
 
         # ``list`` because needs fast iteration
         self.vertices = [Vertex(i) for i in range(order)]
@@ -72,7 +76,7 @@ class GolfGraph(object):
 
         For optimization purposes, this is an terrible all-in-one function.
         """
-        info("connecting graph randomly")
+        debug("connecting graph randomly")
 
         degree = self.degree
         vertices_with_ports_left = list(self.vertices)
@@ -128,7 +132,7 @@ class GolfGraph(object):
         Returns the shortest path from ``vertex_a`` to ``vertex_b``.
         Breadth-First search.
         """
-        info("searching shortest path between %s and %s", vertex_a,
+        debug("searching shortest path between %s and %s", vertex_a,
              vertex_b)
 
         # ``set`` because needs fast lookup:
@@ -172,12 +176,19 @@ class GolfGraph(object):
 
     def analzye(self):
         """
-        Returns the (average shortest path length, diameter) of the graph.
+        Sets instance attributes ``average_shortest_path_length`` and
+        ``diameter``.
 
-        The implementations searches just one direction but then sums up
-        the path length twice to avoid searching the way back as well.
+        For an unconnected graph, we return all zeros or -
+        if not running in optimized mode - raise an ``AssertionError``.
+        Due to this obscure logic, it is not simply not recommended to
+        call this on unconnected graphs.
+
+        The implementations searches just one direction per combination
+        of vertices but then sums up the path length twice to avoid
+        searching the way back as well.
         """
-        info("analyzing graph")
+        debug("analyzing graph")
         if not self.vertices:
             raise RuntimeError(
                 "Don't know how to analyze an empty graph."
@@ -190,4 +201,9 @@ class GolfGraph(object):
             longest_shortest_path = max(longest_shortest_path, length)
             lengths_sum += 2*length
             count += 2
-        return (lengths_sum/count, longest_shortest_path)
+
+        assert lengths_sum > 0, "is this graph unconnected?"
+        assert count > 0, "is this graph unconnected?"
+
+        self.diameter = longest_shortest_path
+        self.average_shortest_path_length = lengths_sum/count

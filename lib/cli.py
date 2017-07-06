@@ -7,8 +7,10 @@ program.
 
 from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-import logging
+from logging import INFO, DEBUG, getLogger, debug
+from multiprocessing import Process
 
+from lib.enhancers import EnhancerRegistry
 from lib.graph_elements import GolfGraph
 
 class Cli(object):
@@ -24,43 +26,36 @@ class Cli(object):
         """
         # enabling debugging is the first thing we (might) have to do:
         if '-d' in argv or '--debug' in argv:
-            logging.getLogger().setLevel(logging.DEBUG)
+            getLogger().setLevel(DEBUG)
 
-        logging.debug("initializing CLI")
+        debug("initializing CLI")
 
-        self.targets = None
+        self.enahncers = None
         """
-        The set of all known targets.
-        """
-
-        self.detected_targets = None
-        """
-        The set of all (i.e. directly) detected targets.
-        """
-
-        self.implied_targets = None
-        """
-        The set of all implied targets (through detected ones).
-        """
-
-        self.injectors = None
-        """
-        The set of all known injectors.
+        All initialized enhancers.
         """
 
         self._init_arg_parser()
+        self._init_enhancers()
         self._init_logging()
         self.args = None
 
     def _init_arg_parser(self):
+
         self.arg_parser = ArgumentParser(
             description=("graph golf challenge experiments "
                          "(http://research.nii.ac.jp/graphgolf/)"),
             formatter_class=ArgumentDefaultsHelpFormatter,
         )
 
+    def _init_enhancers(self):
+        enhancer_classes = EnhancerRegistry.enhancers
+        debug("initializing enhancers %r", enhancer_classes)
+        self.enhancers = [Enhancer(self.arg_parser)
+                          for Enhancer in enhancer_classes]
+
     def _init_logging(self):
-        logging.getLogger().name = "woods"
+        getLogger().name = "woods"
         self.arg_parser.add_argument('-d', '--debug', action='store_true',
                                      default=False,
                                      help='turn on debug messages')
@@ -77,21 +72,28 @@ class Cli(object):
         This kicks off the actual operation (i.e. use the users' args,
         options and sub commands to server the request).
         """
-        logging.debug("starting to run")
+        debug("starting to run")
 
         self._parse_args()
 
-        # temporary
-        graph = GolfGraph(self.args.order, self.args.degree)
-        graph.add_as_many_random_edges_as_possible()
-        average_shortest_path, diameter = graph.analzye()
-        print("average shortest path:", average_shortest_path)
-        print("diameter:", diameter)
+        # create initial graph
+        initial_graph = GolfGraph(self.args.order, self.args.degree)
+        initial_graph.add_as_many_random_edges_as_possible()
+        initial_graph.analzye()
+        print("intial average shortest path:",
+              initial_graph.average_shortest_path_length)
+        print("intial diameter:", initial_graph.diameter)
 
-        raise NotImplementedError
+        # create, start, and join processes
+        processes = [Process(target=enhancer.run, args=(initial_graph,))
+                     for enhancer in self.enhancers]
+        for process in processes:
+            process.start()
+        for process in processes:
+            process.join()
 
     def _parse_args(self):
-        logging.debug("parsing command line arguments")
+        debug("parsing command line arguments")
 
         # display help per default:
         if len(argv) == 1:
@@ -100,7 +102,7 @@ class Cli(object):
         self.args = self.arg_parser.parse_args()
 
         if self.args.verbose:
-            logging.getLogger().setLevel(logging.INFO)
+            getLogger().setLevel(INFO)
 
         if self.args.debug:
-            logging.getLogger().setLevel(logging.DEBUG)
+            getLogger().setLevel(DEBUG)

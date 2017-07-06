@@ -135,9 +135,18 @@ class GolfGraphTest(BaseTest):
             edge = [vertices[vertex_a_i], vertices[vertex_b_i]]
             self.assertEqual(edge, graph.shortest_path(*edge))
 
+    def test_analzye_unconnected(self):
+        """
+        Checks analysis results for an unconnected graph.
+        """
+        graph = GolfGraph(3, 2)
+
+        with self.assertRaises(AssertionError):
+            graph.analzye()
+
     def test_analzye_triangle(self):
         """
-        Asserts shortest path computation for a 'triangle graph'.
+        Checks analysis results for a 'triangle graph'.
         """
         graph = GolfGraph(3, 2)
         vertices = graph.vertices
@@ -147,11 +156,13 @@ class GolfGraphTest(BaseTest):
         for vertex_a_i, vertex_b_i in edges:
             graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
 
-        self.assertEqual(graph.analzye(), (1, 1))
+        graph.analzye()
+        self.assertEqual(graph.diameter, 1)
+        self.assertEqual(graph.average_shortest_path_length, 1)
 
     def test_analzye_rectangle(self):
         """
-        Asserts shortest path computation for a 'triangle graph'.
+        Checks analysis results for a 'triangle graph'.
         """
         graph = GolfGraph(4, 2)
         vertices = graph.vertices
@@ -161,4 +172,6 @@ class GolfGraphTest(BaseTest):
         for vertex_a_i, vertex_b_i in edges:
             graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
 
-        self.assertEqual(graph.analzye(), (4/3, 2))
+        graph.analzye()
+        self.assertEqual(graph.diameter, 2)
+        self.assertEqual(graph.average_shortest_path_length, 4/3)
