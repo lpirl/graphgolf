@@ -182,7 +182,7 @@ class GolfGraph(object):
         """
         return len(self.shortest_path(vertex_a, vertex_b)) - 1
 
-    def analzye(self, parallel=False):
+    def analzye(self):
         """
         Sets instance attributes ``average_shortest_path_length`` and
         ``diameter``.
@@ -207,15 +207,16 @@ class GolfGraph(object):
             )
         longest_shortest_path = -1
         lengths_sum = 0
-        count = 0
+        lengths_count = 0
+
         for vertex_a, vertex_b in combinations(self.vertices, 2):
             length = self.shortest_path_length(vertex_a, vertex_b)
             longest_shortest_path = max(longest_shortest_path, length)
             lengths_sum += length
-            count += 1
+            lengths_count += 1
 
         assert lengths_sum > 0, "is this graph unconnected?"
-        assert count > 0, "is this graph unconnected?"
+        assert lengths_count > 0, "is this graph unconnected?"
 
         self.diameter = longest_shortest_path
-        self.average_shortest_path_length = lengths_sum/count
+        self.average_shortest_path_length = lengths_sum/lengths_count
