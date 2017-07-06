@@ -84,6 +84,9 @@ class Cli(object):
         # temporary
         graph = GolfGraph(self.args.order, self.args.degree)
         graph.add_as_many_random_edges_as_possible()
+        average_shortest_path, diameter = graph.analzye()
+        print("average shortest path:", average_shortest_path)
+        print("diameter:", diameter)
 
         raise NotImplementedError
 

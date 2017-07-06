@@ -138,7 +138,7 @@ class GolfGraphTest(BaseTest):
             edge = [vertices[vertex_a_i], vertices[vertex_b_i]]
             self.assertEqual(edge, graph.shortest_path(*edge))
 
-    def test_average_shortest_path_triangle(self):
+    def test_analzye_triangle(self):
         """
         Asserts shortest path computation for a 'triangle graph'.
         """
@@ -153,9 +153,9 @@ class GolfGraphTest(BaseTest):
                                          vertices[vertex_b_i])
                 )
 
-        self.assertEqual(graph.average_shortes_path_length(), 1)
+        self.assertEqual(graph.analzye(), (1, 1))
 
-    def test_average_shortest_path_rectangle(self):
+    def test_analzye_rectangle(self):
         """
         Asserts shortest path computation for a 'triangle graph'.
         """
@@ -170,4 +170,4 @@ class GolfGraphTest(BaseTest):
                                          vertices[vertex_b_i])
                 )
 
-        self.assertEqual(graph.average_shortes_path_length(), 4/3)
+        self.assertEqual(graph.analzye(), (4/3, 2))

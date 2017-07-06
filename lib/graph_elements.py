@@ -189,19 +189,20 @@ class GolfGraph(object):
         """
         return len(self.shortest_path(vertex_a, vertex_b)) - 1
 
-    def average_shortes_path_length(self):
+    def analzye(self):
         """
-        Determines the average shortest path length between all vertices.
-
-        Instead of (d1 + d2 + ...) / n, we calculate
+        Returns the (average shortest path length, diameter) of the graph.
         """
         if not self.vertices:
             raise RuntimeError(
-                "What is the average shortest path length of an empty graph?"
+                "Don't know how to analyze an empty graph."
             )
+        longest_shortest_path = -1
         lengths_sum = 0
         count = 0
         for vertex_a, vertex_b in permutations(self.vertices, 2):
-            lengths_sum += self.shortest_path_length(vertex_a, vertex_b)
+            length = self.shortest_path_length(vertex_a, vertex_b)
+            longest_shortest_path = max(longest_shortest_path, length)
+            lengths_sum += length
             count += 1
-        return lengths_sum/count
+        return (lengths_sum/count, longest_shortest_path)
