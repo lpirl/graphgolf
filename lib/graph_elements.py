@@ -4,7 +4,7 @@ All elements of a graph.
 
 from logging import debug, info
 from random import shuffle
-from itertools import permutations
+from itertools import combinations
 
 
 
@@ -173,6 +173,9 @@ class GolfGraph(object):
     def analzye(self):
         """
         Returns the (average shortest path length, diameter) of the graph.
+
+        The implementations searches just one direction but then sums up
+        the path length twice to avoid searching the way back as well.
         """
         info("analyzing graph")
         if not self.vertices:
@@ -182,9 +185,9 @@ class GolfGraph(object):
         longest_shortest_path = -1
         lengths_sum = 0
         count = 0
-        for vertex_a, vertex_b in permutations(self.vertices, 2):
+        for vertex_a, vertex_b in combinations(self.vertices, 2):
             length = self.shortest_path_length(vertex_a, vertex_b)
             longest_shortest_path = max(longest_shortest_path, length)
-            lengths_sum += length
-            count += 1
+            lengths_sum += 2*length
+            count += 2
         return (lengths_sum/count, longest_shortest_path)
