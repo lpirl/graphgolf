@@ -5,7 +5,6 @@ This module contains classes that enhance a graph.
 """
 
 from abc import ABCMeta
-from logging import info
 
 from lib.graph_elements import GolfGraph
 
@@ -58,9 +57,11 @@ class AbstractBaseEnhancer(object):
         while True:
             current_graph = self.modify_graph(best_graph)
             current_graph.analzye()
-            if (current_graph.diameter <= best_graph.diameter and
-                    (current_graph.average_shortest_path_length <=
-                     best_graph.average_shortest_path_length)):
+            diameter_diff = current_graph.diameter - best_graph.diameter
+            aspl_diff = (current_graph.average_shortest_path_length -
+                         best_graph.average_shortest_path_length)
+            if ((diameter_diff < 0 and aspl_diff <= 0) or
+                    (diameter_diff <= 0 and aspl_diff < 0)):
                 print(current_graph)
                 best_graph = current_graph
 
