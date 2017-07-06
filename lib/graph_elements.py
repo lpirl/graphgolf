@@ -182,7 +182,7 @@ class GolfGraph(object):
         """
         return len(self.shortest_path(vertex_a, vertex_b)) - 1
 
-    def analzye(self):
+    def analzye(self, parallel=False):
         """
         Sets instance attributes ``average_shortest_path_length`` and
         ``diameter``.
@@ -192,9 +192,13 @@ class GolfGraph(object):
         Due to this obscure logic, it is not simply not recommended to
         call this on unconnected graphs.
 
-        The implementations searches just one direction per combination
-        of vertices but then sums up the path length twice to avoid
-        searching the way back as well.
+        The implementations searches calculates just one direction per
+        combination of vertices but then sums up the path length twice
+        to avoid searching the way back as well:
+        (a + a_reverse + b + b_reverse + ...) / [count] ==
+        (2*a + 2*b + ...) / 2[count] ==
+        2 * (a + b + ...) / 2[count] ==
+        (a + b + ...) / [count]
         """
         debug("analyzing graph")
         if not self.vertices:
@@ -207,8 +211,8 @@ class GolfGraph(object):
         for vertex_a, vertex_b in combinations(self.vertices, 2):
             length = self.shortest_path_length(vertex_a, vertex_b)
             longest_shortest_path = max(longest_shortest_path, length)
-            lengths_sum += 2*length
-            count += 2
+            lengths_sum += length
+            count += 1
 
         assert lengths_sum > 0, "is this graph unconnected?"
         assert count > 0, "is this graph unconnected?"

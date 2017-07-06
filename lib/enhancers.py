@@ -82,10 +82,39 @@ class AbstractBaseEnhancer(object):
 
 
 @EnhancerRegistry.register
-class RandomEnhancer(AbstractBaseEnhancer):
+class RebuildRandomEnhancer(AbstractBaseEnhancer):
     """
     Just rebuilds a random graph and checks if its an enhancement.
     """
+
+    def modify_graph(self, graph):
+        new_graph = GolfGraph(graph.order, graph.degree)
+        new_graph.add_as_many_random_edges_as_possible()
+        return new_graph
+
+
+
+class RandomlyRelinkAPercentageOfTheEdgesEnhancer(AbstractBaseEnhancer):
+    """
+    Just rebuilds a random graph and checks if its an enhancement.
+    """
+
+    PERCENTAGE = None
+    """to be set by subclasses"""
+
+    def modify_graph(self, graph):
+        new_graph = GolfGraph(graph.order, graph.degree)
+        new_graph.add_as_many_random_edges_as_possible()
+        return new_graph
+
+
+@EnhancerRegistry.register
+class RandomlyRelink10PercentageOfTheEdgesEnhancer(RandomlyRelinkAPercentageOfTheEdgesEnhancer):
+    """
+    Just rebuilds a random graph and checks if its an enhancement.
+    """
+
+    PERCENTAGE = 10
 
     def modify_graph(self, graph):
         new_graph = GolfGraph(graph.order, graph.degree)
