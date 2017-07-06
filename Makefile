@@ -7,6 +7,7 @@ pylint:
 
 .PHONY: test
 test:
+	# no -O here!
 	$(PY3_INTERPRETER) -m unittest discover -vp "*_test.py" test
 
 clean:
@@ -16,4 +17,4 @@ example:
 	$(PY3_INTERPRETER) woods 32 5
 
 profile:
-	$(PY3_INTERPRETER) -OO -m cProfile  -s calls woods 100 10
+	$(PY3_INTERPRETER) -OO -m cProfile  -s calls woods 256 18
