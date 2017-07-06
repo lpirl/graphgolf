@@ -107,8 +107,8 @@ class GolfGraphTest(BaseTest):
         vertex2 = graph.vertices[2]
 
         # construct
-        self.assertTrue(graph.add_edge_pessimist(vertex0, vertex1))
-        self.assertTrue(graph.add_edge_pessimist(vertex1, vertex2))
+        graph.add_edge_unsafe(vertex0, vertex1)
+        graph.add_edge_unsafe(vertex1, vertex2)
 
         # check
         self.assertEqual([vertex0, vertex1],
@@ -128,10 +128,7 @@ class GolfGraphTest(BaseTest):
 
         # construct
         for vertex_a_i, vertex_b_i in edges:
-            self.assertTrue(
-                graph.add_edge_pessimist(vertices[vertex_a_i],
-                                         vertices[vertex_b_i])
-                )
+            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
 
         # check
         for vertex_a_i, vertex_b_i in edges:
@@ -148,10 +145,7 @@ class GolfGraphTest(BaseTest):
 
         # construct
         for vertex_a_i, vertex_b_i in edges:
-            self.assertTrue(
-                graph.add_edge_pessimist(vertices[vertex_a_i],
-                                         vertices[vertex_b_i])
-                )
+            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
 
         self.assertEqual(graph.analzye(), (1, 1))
 
@@ -165,9 +159,6 @@ class GolfGraphTest(BaseTest):
 
         # construct
         for vertex_a_i, vertex_b_i in edges:
-            self.assertTrue(
-                graph.add_edge_pessimist(vertices[vertex_a_i],
-                                         vertices[vertex_b_i])
-                )
+            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
 
         self.assertEqual(graph.analzye(), (4/3, 2))
