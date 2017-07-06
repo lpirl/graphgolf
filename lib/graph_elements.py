@@ -2,7 +2,7 @@
 All elements of a graph.
 """
 
-from logging import debug
+from logging import debug, info
 from random import shuffle
 from itertools import permutations
 
@@ -46,6 +46,7 @@ class GolfGraph(object):
     """
 
     def __init__(self, order, degree):
+        info("initializing graph")
         self.order = order
         self.degree = degree
 
@@ -112,6 +113,7 @@ class GolfGraph(object):
          ``self.degree`` allows.
         This implementation targets graphs with no initial edges_to.
         """
+        info("connecting graph randomly")
 
         def connect_vertex(vertex_a, vertices_b):
             """
@@ -149,6 +151,8 @@ class GolfGraph(object):
         Returns the shortest path from ``vertex_a`` to ``vertex_b``.
         Breadth-First search.
         """
+        info("searching shortest path between %s and %s", vertex_a,
+             vertex_b)
 
         # ``set`` because needs fast lookup:
         ever_enqueued = {vertex_a}
@@ -193,6 +197,7 @@ class GolfGraph(object):
         """
         Returns the (average shortest path length, diameter) of the graph.
         """
+        info("analyzing graph")
         if not self.vertices:
             raise RuntimeError(
                 "Don't know how to analyze an empty graph."
