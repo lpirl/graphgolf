@@ -202,7 +202,7 @@ class GolfGraph(object):
         """
         return len(self.shortest_path(vertex_a, vertex_b)) - 1
 
-    def analzye(self):
+    def analyze(self):
         """
         Sets instance attributes ``average_shortest_path_length`` and
         ``diameter``.

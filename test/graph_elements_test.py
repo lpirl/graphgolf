@@ -165,36 +165,36 @@ class GolfGraphTest(BaseTest):
         for order, degree in orders_degrees:
             graph = GolfGraph(order, degree)
             graph.add_as_many_random_edges_as_possible()
-            graph.analzye()
+            graph.analyze()
             self.assertEqual(1, graph.diameter)
             self.assertEqual(1, graph.average_shortest_path_length)
 
-    def test_analzye_unconnected(self):
+    def test_analyze_unconnected(self):
         """
         Checks analysis results for an unconnected graph.
         """
         graph = GolfGraph(3, 2)
 
         with self.assertRaises(AssertionError):
-            graph.analzye()
+            graph.analyze()
 
-    def test_analzye_triangle(self):
+    def test_analyze_triangle(self):
         """
         Checks analysis results for a 'triangle graph'.
         """
         graph = self.triangle_graph()
 
-        graph.analzye()
+        graph.analyze()
         self.assertEqual(graph.diameter, 1)
         self.assertEqual(graph.average_shortest_path_length, 1)
 
-    def test_analzye_rectangle(self):
+    def test_analyze_rectangle(self):
         """
         Checks analysis results for a 'triangle graph'.
         """
         graph = self.rectangle_graph()
 
-        graph.analzye()
+        graph.analyze()
         self.assertEqual(graph.diameter, 2)
         self.assertEqual(graph.average_shortest_path_length, 4/3)
 

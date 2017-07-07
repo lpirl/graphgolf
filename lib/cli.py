@@ -79,7 +79,7 @@ class Cli(object):
         # create initial graph
         initial_graph = GolfGraph(self.args.order, self.args.degree)
         initial_graph.add_as_many_random_edges_as_possible()
-        initial_graph.analzye()
+        initial_graph.analyze()
         print("intial graph:", initial_graph)
 
         # create, start, and join processes

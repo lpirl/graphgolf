@@ -67,7 +67,7 @@ class AbstractBaseEnhancer(object):
             if not current_graph:
                 warning("%s did not return a graph", self.__class__.__name__)
                 return
-            current_graph.analzye()
+            current_graph.analyze()
             diameter_diff = current_graph.diameter - best_graph.diameter
             aspl_diff = (current_graph.average_shortest_path_length -
                          best_graph.average_shortest_path_length)
