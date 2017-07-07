@@ -5,13 +5,16 @@ All elements of a graph.
 from logging import debug
 from random import shuffle
 from itertools import combinations
+from copy import copy
 
 
 
 class Vertex(object):
     """
     A node in a graph.
-    Keep this minimal.
+
+    We keep this minimal since we'll have a lot of vertices in memory.
+    Therefore, most logic is implemented in ``GolfGraph``.
     """
 
     def __init__(self, id):
@@ -36,7 +39,7 @@ class Vertex(object):
         return "V-%i" % self.id
 
     def __repr__(self):
-        return self.__repr__()
+        return self.__str__()
 
 class GolfGraph(object):
     """
@@ -75,7 +78,17 @@ class GolfGraph(object):
         assert len(vertex_a.edges_to) <= self.degree
         assert len(vertex_b.edges_to) <= self.degree
 
-    def add_as_many_random_edges_as_possible(self):
+    @staticmethod
+    def remove_edge_unsafe(vertex_a, vertex_b):
+        """
+        Removes an edge between the two given vertices w/o checking anything.
+        """
+        debug("de-wiring %s and %s", vertex_a, vertex_b)
+        assert vertex_a != vertex_b, "vertex should not have edge to itself"
+        vertex_a.edges_to.remove(vertex_b)
+        vertex_b.edges_to.remove(vertex_a)
+
+    def add_as_many_random_edges_as_possible(self, limit_to_vertices=None):
         """
         Adds random edges to the graph, to the maximum what
          ``self.degree`` allows.
@@ -86,15 +99,15 @@ class GolfGraph(object):
         debug("connecting graph randomly")
 
         degree = self.degree
-        vertices_with_ports_left = list(self.vertices)
+        overall_vertices = limit_to_vertices or list(self.vertices)
 
         # repeat ``degree`` times
         for _ in range(degree):
 
-            if len(vertices_with_ports_left) < 2:
+            if len(overall_vertices) < 2:
                 break
 
-            current_vertices = list(vertices_with_ports_left)
+            current_vertices = list(overall_vertices)
             shuffle(current_vertices)
 
             # repeat until no(t enough) vertices left
@@ -106,7 +119,7 @@ class GolfGraph(object):
                 # honor degree at vertex a
                 if len(vertex_a.edges_to) == degree:
                     debug("vertex a has no ports left")
-                    vertices_with_ports_left.remove(vertex_a)
+                    overall_vertices.remove(vertex_a)
                     continue
                 assert len(vertex_a.edges_to) < degree
 
@@ -116,6 +129,8 @@ class GolfGraph(object):
                     # honor degree at vertex b
                     if len(vertex_b.edges_to) == degree:
                         debug("vertex b has no ports left")
+                        # TODO:
+                        #~ overall_vertices.remove(vertex_b)
                         continue
                     assert len(vertex_b.edges_to) < degree
 
@@ -130,7 +145,6 @@ class GolfGraph(object):
                         continue
 
                     # no constraints violated, let's connect to this vertex
-                    current_vertices.remove(vertex_b)
                     self.add_edge_unsafe(vertex_a, vertex_b)
                     break
 

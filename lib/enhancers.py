@@ -5,8 +5,9 @@ This module contains classes that enhance a graph.
 """
 
 from abc import ABCMeta
-
-from lib.graph_elements import GolfGraph
+from random import sample
+from logging import warning, info
+from copy import deepcopy
 
 
 
@@ -53,16 +54,26 @@ class AbstractBaseEnhancer(object):
         """
         Tries to enhance a graph **IN PLACE**.
         """
+
+        # pointless to do anything for completely connected graph
+        if graph.order-1 <= graph.degree:
+            info("graph fully connected - no need to do anything")
+            return
+
         best_graph = graph
         while True:
-            current_graph = self.modify_graph(best_graph)
+            current_graph = deepcopy(best_graph)
+            current_graph = self.modify_graph(current_graph)
+            if not current_graph:
+                warning("%s did not return a graph", self.__class__.__name__)
+                return
             current_graph.analzye()
             diameter_diff = current_graph.diameter - best_graph.diameter
             aspl_diff = (current_graph.average_shortest_path_length -
                          best_graph.average_shortest_path_length)
             if ((diameter_diff < 0 and aspl_diff <= 0) or
                     (diameter_diff <= 0 and aspl_diff < 0)):
-                print(current_graph)
+                print(current_graph, "by", self.__class__.__name__)
                 best_graph = current_graph
 
     @staticmethod
@@ -81,42 +92,58 @@ class AbstractBaseEnhancer(object):
 
 
 
-@EnhancerRegistry.register
-class RebuildRandomEnhancer(AbstractBaseEnhancer):
+class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
     """
-    Just rebuilds a random graph and checks if its an enhancement.
-    """
-
-    def modify_graph(self, graph):
-        new_graph = GolfGraph(graph.order, graph.degree)
-        new_graph.add_as_many_random_edges_as_possible()
-        return new_graph
-
-
-
-class RandomlyRelinkAPercentageOfTheEdgesEnhancer(AbstractBaseEnhancer):
-    """
-    Just rebuilds a random graph and checks if its an enhancement.
+    Removes ``PERCENTAGE`` percent of edges and adds new ones.
     """
 
     PERCENTAGE = None
     """to be set by subclasses"""
 
     def modify_graph(self, graph):
-        new_graph = GolfGraph(graph.order, graph.degree)
-        new_graph.add_as_many_random_edges_as_possible()
-        return new_graph
+        """
+        Chooses PERCENT random vertices removes their "first" edge and
+        adds another one.
+        """
+        vertices = graph.vertices
+        sample_size = int(self.PERCENTAGE * (len(vertices)/100))
+
+        assert graph.order > graph.degree-1
+        # If we disconnect just one vertex, we'll reconnect it to the
+        # same other vertex. Pointless.
+        if sample_size < 2:
+            warning("graph to small for %s", self.__class__.__name__)
+            return
+
+        sampled_vertices = sample(vertices, sample_size)
+        consider_when_relinking = []
+        for vertex_a in sampled_vertices:
+            if vertex_a.edges_to:
+                vertex_b = vertex_a.edges_to[0]
+                graph.remove_edge_unsafe(vertex_a, vertex_b)
+                consider_when_relinking.append(vertex_a)
+                consider_when_relinking.append(vertex_b)
+
+        graph.add_as_many_random_edges_as_possible(consider_when_relinking)
+
+        return graph
+
 
 
 @EnhancerRegistry.register
-class RandomlyRelink10PercentageOfTheEdgesEnhancer(RandomlyRelinkAPercentageOfTheEdgesEnhancer):
+class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
     """
-    Just rebuilds a random graph and checks if its an enhancement.
+    Removes 10 percent of edges and adds new ones.
     """
 
     PERCENTAGE = 10
 
-    def modify_graph(self, graph):
-        new_graph = GolfGraph(graph.order, graph.degree)
-        new_graph.add_as_many_random_edges_as_possible()
-        return new_graph
+
+
+@EnhancerRegistry.register
+class RandomlyReplace50PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
+    """
+    Removes 10 percent of edges and adds new ones.
+    """
+
+    PERCENTAGE = 50

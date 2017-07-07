@@ -1,4 +1,5 @@
 from itertools import permutations
+from copy import deepcopy
 
 from test import BaseTest
 from lib.graph_elements import GolfGraph, Vertex
@@ -9,15 +10,52 @@ class GolfGraphTest(BaseTest):
     """
 
     @staticmethod
-    def some_graph():
+    def unconnected_graph():
         return GolfGraph(32, 4)
+
+    @staticmethod
+    def line_graph():
+        graph = GolfGraph(3, 2)
+        vertex0 = graph.vertices[0]
+        vertex1 = graph.vertices[1]
+        vertex2 = graph.vertices[2]
+
+        # construct
+        graph.add_edge_unsafe(vertex0, vertex1)
+        graph.add_edge_unsafe(vertex1, vertex2)
+
+        return graph
+
+    @staticmethod
+    def triangle_graph():
+        graph = GolfGraph(3, 2)
+        vertices = graph.vertices
+        edges = ((0, 1), (1, 2), (2, 0))
+
+        # construct
+        for vertex_a_i, vertex_b_i in edges:
+            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
+
+        return graph
+
+    @staticmethod
+    def rectangle_graph():
+        graph = GolfGraph(4, 2)
+        vertices = graph.vertices
+        edges = ((0, 1), (1, 2), (2, 3), (3, 0))
+
+        # construct
+        for vertex_a_i, vertex_b_i in edges:
+            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
+
+        return graph
 
     def test_vertex_creation(self):
         """
         Tests whether all vertices are created correctly.
         """
 
-        graph = self.some_graph()
+        graph = self.unconnected_graph()
         vertices = graph.vertices
         degree = graph.degree
 
@@ -29,7 +67,7 @@ class GolfGraphTest(BaseTest):
         """
         Tests whether we cannot add more edges than ``graph.degree``.
         """
-        graph = self.some_graph()
+        graph = self.unconnected_graph()
         vertices = graph.vertices
         add_edge_unsafe = graph.add_edge_unsafe
         vertex_to_add_to = vertices[-1]
@@ -47,7 +85,7 @@ class GolfGraphTest(BaseTest):
         """
         Tests whether we cannot add an edges between a vertex and itself.
         """
-        graph = self.some_graph()
+        graph = self.unconnected_graph()
         vertex = graph.vertices[0]
         with self.assertRaises(AssertionError):
             graph.add_edge_unsafe(vertex, vertex)
@@ -99,41 +137,37 @@ class GolfGraphTest(BaseTest):
 
     def test_shortest_path_line(self):
         """
-        Asserts shortest path computation for a 'line graph' with 3 vertexes.
+        Asserts shortest path computation for a 'line graph' with 3 vertices.
         """
-        graph = GolfGraph(3, 2)
-        vertex0 = graph.vertices[0]
-        vertex1 = graph.vertices[1]
-        vertex2 = graph.vertices[2]
-
-        # construct
-        graph.add_edge_unsafe(vertex0, vertex1)
-        graph.add_edge_unsafe(vertex1, vertex2)
-
-        # check
-        self.assertEqual([vertex0, vertex1],
-                         graph.shortest_path(vertex0, vertex1))
-        self.assertEqual([vertex1, vertex2],
-                         graph.shortest_path(vertex1, vertex2))
-        self.assertEqual(set((vertex0, vertex1, vertex2)),
-                         set(graph.shortest_path(vertex0, vertex2)))
+        graph = self.line_graph()
+        vertices = graph.vertices
+        self.assertEqual([vertices[0], vertices[1]],
+                         graph.shortest_path(vertices[0], vertices[1]))
+        self.assertEqual([vertices[1], vertices[2]],
+                         graph.shortest_path(vertices[1], vertices[2]))
+        self.assertEqual([vertices[0], vertices[1], vertices[2]],
+                         graph.shortest_path(vertices[0], vertices[2]))
 
     def test_shortest_path_triangle(self):
         """
         Asserts shortest path computation for a 'triangle graph'.
         """
-        graph = GolfGraph(3, 2)
-        vertices = graph.vertices
-        edges = ((0, 1), (1, 2), (2, 0))
+        graph = self.triangle_graph()
 
-        # construct
-        for vertex_a_i, vertex_b_i in edges:
-            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
+        for edge in permutations(graph.vertices, 2):
+            self.assertEqual(list(edge), graph.shortest_path(*edge))
 
-        # check
-        for vertex_a_i, vertex_b_i in edges:
-            edge = [vertices[vertex_a_i], vertices[vertex_b_i]]
-            self.assertEqual(edge, graph.shortest_path(*edge))
+    def test_shortest_path_fully_connected(self):
+        """
+        Asserts shortest path computation for some fully connected graphs.
+        """
+        orders_degrees = ((5, 4), (10, 9), (10, 11))
+        for order, degree in orders_degrees:
+            graph = GolfGraph(order, degree)
+            graph.add_as_many_random_edges_as_possible()
+            graph.analzye()
+            self.assertEqual(1, graph.diameter)
+            self.assertEqual(1, graph.average_shortest_path_length)
 
     def test_analzye_unconnected(self):
         """
@@ -148,13 +182,7 @@ class GolfGraphTest(BaseTest):
         """
         Checks analysis results for a 'triangle graph'.
         """
-        graph = GolfGraph(3, 2)
-        vertices = graph.vertices
-        edges = ((0, 1), (1, 2), (2, 0))
-
-        # construct
-        for vertex_a_i, vertex_b_i in edges:
-            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
+        graph = self.triangle_graph()
 
         graph.analzye()
         self.assertEqual(graph.diameter, 1)
@@ -164,14 +192,51 @@ class GolfGraphTest(BaseTest):
         """
         Checks analysis results for a 'triangle graph'.
         """
-        graph = GolfGraph(4, 2)
-        vertices = graph.vertices
-        edges = ((0, 1), (1, 2), (2, 3), (3, 0))
-
-        # construct
-        for vertex_a_i, vertex_b_i in edges:
-            graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
+        graph = self.rectangle_graph()
 
         graph.analzye()
         self.assertEqual(graph.diameter, 2)
         self.assertEqual(graph.average_shortest_path_length, 4/3)
+
+    def test_remove_edge(self):
+        """
+        Tests whether removing and edge makes the path longer.
+        """
+        graph = self.line_graph()
+        vertices = graph.vertices
+        vertex0 = vertices[0]
+        vertex1 = vertices[1]
+        vertex2 = vertices[2]
+
+        # this is what we expect from the test code
+        assert vertex1 in vertex0.edges_to
+        assert vertex2 in vertex1.edges_to
+
+        graph.remove_edge_unsafe(vertex0, vertex1)
+
+        # this is what we expect from the actual code
+        self.assertNotIn(vertex1, vertex0.edges_to)
+        self.assertIn(vertex2, vertex1.edges_to)
+
+    def test_remove_edge_rectangle(self):
+        """
+        Tests whether removing and edge makes the path longer.
+        """
+        graph = self.rectangle_graph()
+        vertices = graph.vertices
+        graph.remove_edge_unsafe(vertices[0], vertices[-1])
+        self.assertEqual(vertices,
+                         graph.shortest_path(vertices[0], vertices[-1]))
+
+    def test_deepcopy_rectangle(self):
+        """
+        Tests whether ``deepcopy`` does what we expect.
+
+        (This would normally be not a test, but oh well...)
+        """
+        graph_a = self.rectangle_graph()
+        graph_b = deepcopy(graph_a)
+
+        graph_a.remove_edge_unsafe(graph_a.vertices[0], graph_a.vertices[1])
+        self.assertIn(graph_b.vertices[1], graph_b.vertices[0].edges_to)
+        self.assertIn(graph_b.vertices[0], graph_b.vertices[1].edges_to)
