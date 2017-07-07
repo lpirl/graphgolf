@@ -94,7 +94,7 @@ class GolfGraph(object):
          ``self.degree`` allows.
         This implementation targets graphs with no initial edges_to.
 
-        For optimization purposes, this is an terrible all-in-one function.
+        For optimization purposes, this is an terrible all-in-one method.
         """
         debug("connecting graph randomly")
 
@@ -119,7 +119,12 @@ class GolfGraph(object):
                 # honor degree at vertex a
                 if len(vertex_a.edges_to) == degree:
                     debug("vertex a has no ports left")
-                    overall_vertices.remove(vertex_a)
+                    try:
+                        # the vertex might be removed already, if it was
+                        # found as a "vertex_b" with no ports left
+                        overall_vertices.remove(vertex_a)
+                    except ValueError:
+                        pass
                     continue
                 assert len(vertex_a.edges_to) < degree
 
@@ -129,19 +134,20 @@ class GolfGraph(object):
                     # honor degree at vertex b
                     if len(vertex_b.edges_to) == degree:
                         debug("vertex b has no ports left")
-                        # TODO:
-                        #~ overall_vertices.remove(vertex_b)
+                        # discouraged
+                        current_vertices.remove(vertex_b)
+                        overall_vertices.remove(vertex_b)
                         continue
                     assert len(vertex_b.edges_to) < degree
-
-                    # do not add edges_to that already exist
-                    if vertex_b in vertex_a.edges_to:
-                        debug("vertices already connected")
-                        continue
 
                     # do not add self-edges
                     if vertex_a == vertex_b:
                         debug("vertices are the same")
+                        continue
+
+                    # do not add edges_to that already exist
+                    if vertex_b in vertex_a.edges_to:
+                        debug("vertices already connected")
                         continue
 
                     # no constraints violated, let's connect to this vertex
