@@ -50,17 +50,18 @@ class AbstractBaseEnhancer(object):
         """
         self.args = args
 
-    def run(self, graph):
+    def enhance(self, best_graph):
         """
-        Tries to enhance a graph **IN PLACE**.
+        Tries to enhance a graph; possibly **IN PLACE**.
+        Returns an enhanced graph, and something else if that could not
+        be determined.
         """
 
         # pointless to do anything for completely connected graph
-        if graph.order-1 <= graph.degree:
+        if best_graph.order-1 <= best_graph.degree:
             info("graph fully connected - no need to do anything")
             return
 
-        best_graph = graph
         while True:
             current_graph = deepcopy(best_graph)
             current_graph = self.modify_graph(current_graph)
@@ -74,7 +75,7 @@ class AbstractBaseEnhancer(object):
             if ((diameter_diff < 0 and aspl_diff <= 0) or
                     (diameter_diff <= 0 and aspl_diff < 0)):
                 print(current_graph, "by", self.__class__.__name__)
-                best_graph = current_graph
+                return current_graph
 
     @staticmethod
     def _report(graph):
@@ -131,19 +132,27 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
 
 
 @EnhancerRegistry.register
-class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
-    """
-    Removes 10 percent of edges and adds new ones.
-    """
+class RandomlyReplace1PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
+    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
+    PERCENTAGE = 1
 
+
+
+@EnhancerRegistry.register
+class RandomlyReplace5PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
+    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
+    PERCENTAGE = 5
+
+
+
+@EnhancerRegistry.register
+class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
+    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
     PERCENTAGE = 10
 
 
 
 @EnhancerRegistry.register
 class RandomlyReplace50PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
-    """
-    Removes 10 percent of edges and adds new ones.
-    """
-
+    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
     PERCENTAGE = 50
