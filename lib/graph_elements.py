@@ -87,8 +87,7 @@ class GolfGraph(object):
         assert len(vertex_a.edges_to) <= self.degree
         assert len(vertex_b.edges_to) <= self.degree
 
-    @staticmethod
-    def remove_edge_unsafe(vertex_a, vertex_b):
+    def remove_edge_unsafe(self, vertex_a, vertex_b):
         """
         Removes an edge between the two given vertices w/o checking anything.
         """
