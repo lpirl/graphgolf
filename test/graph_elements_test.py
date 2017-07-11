@@ -230,9 +230,7 @@ class GolfGraphTest(BaseTest):
 
     def test_duplicate_rectangle(self):
         """
-        Tests whether ``deepcopy`` does what we expect.
-
-        (This would normally be not a test, but oh well...)
+        Tests graph duplication.
         """
         graph_a = self.rectangle_graph()
         graph_b = graph_a.duplicate()
@@ -240,3 +238,14 @@ class GolfGraphTest(BaseTest):
         graph_a.remove_edge_unsafe(graph_a.vertices[0], graph_a.vertices[1])
         self.assertIn(graph_b.vertices[1], graph_b.vertices[0].edges_to)
         self.assertIn(graph_b.vertices[0], graph_b.vertices[1].edges_to)
+
+    def test_edges_rectangle(self):
+        """
+        Tests whether ``edges()`` does what we expect.
+        """
+        graph = self.rectangle_graph()
+        edges = graph.edges()
+
+        self.assertEqual(4, len(edges))
+        self.assertIn((graph.vertices[1], graph.vertices[2]), edges)
+        self.assertNotIn((graph.vertices[0], graph.vertices[2]), edges)

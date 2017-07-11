@@ -184,8 +184,8 @@ class GolfGraph(object):
         # previous searches
         vertex_a.breadcrumb = None
 
-        # breadth-first walk the graph and lay breadcrumbs until the
-        # desired vertex is found
+        # non-recursive breadth-first walk the graph and lay breadcrumbs
+        # until the desired vertex is found
         currently_visiting = None
         while currently_enqueued:
             currently_visiting = currently_enqueued.pop(0)
