@@ -6,7 +6,7 @@ This module contains classes that enhance a graph.
 
 from abc import ABCMeta
 from random import sample
-from logging import warning, info
+from logging import info
 from copy import deepcopy
 
 
@@ -66,7 +66,7 @@ class AbstractBaseEnhancer(object):
             current_graph = deepcopy(best_graph)
             current_graph = self.modify_graph(current_graph)
             if not current_graph:
-                warning("%s did not return a graph", self.__class__.__name__)
+                info("%s did not return a graph", self.__class__.__name__)
                 return
             current_graph.analyze()
             diameter_diff = current_graph.diameter - best_graph.diameter
@@ -113,7 +113,7 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
         # If we disconnect just one vertex, we'll reconnect it to the
         # same other vertex. Pointless.
         if sample_size < 2:
-            warning("graph to small for %s", self.__class__.__name__)
+            info("graph to small for %s", self.__class__.__name__)
             return
 
         sampled_vertices = sample(vertices, sample_size)

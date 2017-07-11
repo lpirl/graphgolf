@@ -5,7 +5,6 @@ All elements of a graph.
 from logging import debug
 from random import shuffle
 from itertools import combinations
-from copy import copy
 
 
 
