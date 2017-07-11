@@ -93,6 +93,8 @@ class GolfGraph(object):
         Removes an edge between the two given vertices w/o checking anything.
         """
         debug("de-wiring %s and %s", vertex_a, vertex_b)
+        assert vertex_a in self.vertices
+        assert vertex_b in self.vertices
         assert vertex_a != vertex_b, "vertex should not have edge to itself"
         vertex_a.edges_to.remove(vertex_b)
         vertex_b.edges_to.remove(vertex_a)
