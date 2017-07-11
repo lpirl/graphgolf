@@ -228,14 +228,14 @@ class GolfGraphTest(BaseTest):
         self.assertEqual(vertices,
                          graph.shortest_path(vertices[0], vertices[-1]))
 
-    def test_deepcopy_rectangle(self):
+    def test_duplicate_rectangle(self):
         """
         Tests whether ``deepcopy`` does what we expect.
 
         (This would normally be not a test, but oh well...)
         """
         graph_a = self.rectangle_graph()
-        graph_b = deepcopy(graph_a)
+        graph_b = graph_a.duplicate()
 
         graph_a.remove_edge_unsafe(graph_a.vertices[0], graph_a.vertices[1])
         self.assertIn(graph_b.vertices[1], graph_b.vertices[0].edges_to)

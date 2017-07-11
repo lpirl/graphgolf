@@ -34,6 +34,14 @@ class Vertex(object):
     def __eq__(self, other):
         return self.id == other.id
 
+    def __lt__(self, other):
+        """
+        Ordering vertices can be useful for optimizations
+        (e.g, avoid the use of sets by always creating edges with
+        the "smaller" vertex first).
+        """
+        return self.id < other.id
+
     def __str__(self):
         return "V-%i" % self.id
 
@@ -70,6 +78,8 @@ class GolfGraph(object):
         """
         Adds an edge between the two given vertices w/o checking constraints.
         """
+        assert vertex_a in self.vertices
+        assert vertex_b in self.vertices
         assert vertex_a != vertex_b
         debug("wiring %s and %s", vertex_a, vertex_b)
         vertex_a.edges_to.append(vertex_b)
@@ -239,3 +249,39 @@ class GolfGraph(object):
 
         self.diameter = longest_shortest_path
         self.average_shortest_path_length = lengths_sum/lengths_count
+
+    def edges(self):
+        """
+        Returns a set of (ordered) tuples, which represent edges.
+        """
+        edges = set()
+        for vertex_a in self.vertices:
+            for vertex_b in vertex_a.edges_to:
+                if vertex_a < vertex_b:
+                    edges.add((vertex_a, vertex_b))
+                else:
+                    edges.add((vertex_b, vertex_a))
+        return edges
+
+    def duplicate(self):
+        """
+        Returns a (deep) duplicate of this graph.
+
+        ``deepcopy`` of the ``copy`` module is no option, since it soon
+        hits the maximum recursion depth.
+        """
+        # create a fresh graph with fresh vertices
+        dup = self.__class__(self.order, self.degree)
+
+        # duplicate edges
+        for vertex_a, vertex_b in self.edges():
+            dup.add_edge_unsafe(
+                dup.vertices[vertex_a.id],
+                dup.vertices[vertex_b.id]
+            )
+
+        # copy analysis data
+        dup.diameter = self.diameter
+        dup.average_shortest_path_length = self.average_shortest_path_length
+
+        return dup

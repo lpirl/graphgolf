@@ -173,13 +173,3 @@ class Cli(object):
                         #~ debug("controller waits for child %i", pid)
                         #~ waitpid(pid, 0)
                 exit(0)
-
-    #~ def exit(self, code=0):
-        #~ """
-        #~ Makes sure own PID is not present in ``children_pids`` and exits.
-        #~ """
-        #~ pid = getpid()
-        #~ for child_i in len(self.enhancers):
-            #~ if self.children_pids[child_i] == pid:
-                #~ self.children_pids[child_i] = None
-        #~ exit(code)

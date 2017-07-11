@@ -7,7 +7,6 @@ This module contains classes that enhance a graph.
 from abc import ABCMeta
 from random import sample
 from logging import info
-from copy import deepcopy
 
 
 
@@ -63,7 +62,7 @@ class AbstractBaseEnhancer(object):
             return
 
         while True:
-            current_graph = deepcopy(best_graph)
+            current_graph = best_graph.duplicate()
             current_graph = self.modify_graph(current_graph)
             if not current_graph:
                 info("%s did not return a graph", self.__class__.__name__)
