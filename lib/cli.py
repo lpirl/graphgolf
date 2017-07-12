@@ -105,9 +105,7 @@ class Cli(object):
         try:
             self._run()
         except KeyboardInterrupt:
-            # todo: write to file?
-            for vertex_a, vertex_b in self.best_graph.edges():
-                print(vertex_a.id, vertex_b.id)
+            self.write_best_graph()
 
     def _run(self):
         """
@@ -142,3 +140,23 @@ class Cli(object):
                 process = processes.pop()
                 debug("terminating %s", process)
                 process.terminate()
+
+    def write_best_graph(self):
+        """
+        Writes the best graph to a file.
+        """
+        assert self.best_graph.diameter is not None
+        assert self.best_graph.average_shortest_path_length is not None
+
+        info("writing out best graph found")
+
+        filename = "-".join((
+            "graph",
+            "order=%i" % self.best_graph.order,
+            "degree=%i" % self.best_graph.degree,
+            "diameter=%i" % self.best_graph.diameter,
+            "aspl=%f" % self.best_graph.average_shortest_path_length
+        ))
+        with open(filename, mode="w") as open_file:
+            open_file.writelines(("%i %i\n" % (v1.id, v2.id)
+                                  for v1, v2 in self.best_graph.edges()))
