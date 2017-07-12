@@ -48,6 +48,8 @@ class Cli(object):
                          "(http://research.nii.ac.jp/graphgolf/)"),
             formatter_class=ArgumentDefaultsHelpFormatter,
         )
+        self.arg_parser.add_argument('-e', '--edges', type=str,
+                                     help="file name to load edges from")
         self.arg_parser.add_argument('order', type=int,
                                      help="order of the graph")
         self.arg_parser.add_argument('degree', type=int,
@@ -96,16 +98,20 @@ class Cli(object):
         """
         debug("starting to run")
         self._parse_args()
-        graph = GolfGraph(self.args.order, self.args.degree)
-        graph.add_as_many_random_edges_as_possible()
-        graph.analyze()
-        print("initial graph:", graph)
-        self.best_graph = graph
+
+        self.best_graph = GolfGraph(self.args.order, self.args.degree)
+        if self.args.edges:
+            self.load_edges()
+        else:
+            self.best_graph.add_as_many_random_edges_as_possible()
+
+        self.best_graph.analyze()
+        print("initial graph:", self.best_graph)
 
         try:
             self._run()
         except KeyboardInterrupt:
-            self.write_best_graph()
+            self.write_edges()
 
     def _run(self):
         """
@@ -141,9 +147,11 @@ class Cli(object):
                 debug("terminating %s", process)
                 process.terminate()
 
-    def write_best_graph(self):
+    def write_edges(self):
         """
         Writes the best graph to a file.
+
+        #refactoring: maybe this should be moved to another/separate class?
         """
         assert self.best_graph.diameter is not None
         assert self.best_graph.average_shortest_path_length is not None
@@ -151,7 +159,7 @@ class Cli(object):
         info("writing out best graph found")
 
         filename = "-".join((
-            "graph",
+            "edges",
             "order=%i" % self.best_graph.order,
             "degree=%i" % self.best_graph.degree,
             "diameter=%i" % self.best_graph.diameter,
@@ -160,3 +168,23 @@ class Cli(object):
         with open(filename, mode="w") as open_file:
             open_file.writelines(("%i %i\n" % (v1.id, v2.id)
                                   for v1, v2 in self.best_graph.edges()))
+
+    def load_edges(self):
+        """
+        Loads edges form the file specified in ``self.args`` into
+        ``self.best_graph``.
+
+        #refactoring: maybe this should be moved to another/separate class?
+        """
+        assert self.args.edges is not None
+        add_edge_unsafe = self.best_graph.add_edge_unsafe
+        with open(self.args.edges, "r") as open_file:
+            for line in open_file.readlines():
+                line = line.strip()
+                vertex_a_id, vertex_b_id = line.split(" ")
+                assert vertex_a_id.isdigit()
+                assert vertex_b_id.isdigit()
+                self.best_graph.add_edge_unsafe(
+                    self.best_graph.vertices[int(vertex_a_id)],
+                    self.best_graph.vertices[int(vertex_b_id)],
+                )
