@@ -97,24 +97,25 @@ class GolfGraphTest(BaseTest):
         """
 
         # some common cases: negative, zero, odd, even, small, big
-        values = (-1, 0, 1, 3, 4, 32, 33)
-        test_cases = permutations(values, 2)
+        orders = (1, 3, 4, 32, 33)
+        degrees = (2, 3, 4, 32, 33)
 
-        for order, degree in test_cases:
-            graph = GolfGraph(order, degree)
-            graph.add_as_many_random_edges_as_possible()
-            for vertex in graph.vertices:
-                edges_to = vertex.edges_to
+        for order in orders:
+            for degree in degrees:
+                graph = GolfGraph(order, degree)
+                graph.add_as_many_random_edges_as_possible()
+                for vertex in graph.vertices:
+                    edges_to = vertex.edges_to
 
-                # no more edges_to vertices than the degree allows for
-                if degree >= 0:
-                    self.assertTrue(len(edges_to) <= degree)
+                    # no more edges_to vertices than the degree allows for
+                    if degree >= 0:
+                        self.assertTrue(len(edges_to) <= degree)
 
-                # no self-connections
-                self.assertNotIn(vertex, edges_to)
+                    # no self-connections
+                    self.assertNotIn(vertex, edges_to)
 
-                # no duplicates in edges_to vertices
-                self.assertEqual(len(edges_to), len(set(edges_to)))
+                    # no duplicates in edges_to vertices
+                    self.assertEqual(len(edges_to), len(set(edges_to)))
 
     def test_shortest_path_one_vertex(self):
         """
@@ -167,7 +168,7 @@ class GolfGraphTest(BaseTest):
             graph.add_as_many_random_edges_as_possible()
             graph.analyze()
             self.assertEqual(1, graph.diameter)
-            self.assertEqual(1, graph.average_shortest_path_length)
+            self.assertEqual(1, graph.aspl)
 
     def test_analyze_unconnected(self):
         """
@@ -186,7 +187,7 @@ class GolfGraphTest(BaseTest):
 
         graph.analyze()
         self.assertEqual(graph.diameter, 1)
-        self.assertEqual(graph.average_shortest_path_length, 1)
+        self.assertEqual(graph.aspl, 1)
 
     def test_analyze_rectangle(self):
         """
@@ -196,7 +197,7 @@ class GolfGraphTest(BaseTest):
 
         graph.analyze()
         self.assertEqual(graph.diameter, 2)
-        self.assertEqual(graph.average_shortest_path_length, 4/3)
+        self.assertEqual(graph.aspl, 4/3)
 
     def test_remove_edge(self):
         """

@@ -81,8 +81,8 @@ class AbstractBaseEnhancer(object):
             # analyze
             current_graph.analyze()
             diameter_diff = current_graph.diameter - best_graph.diameter
-            aspl_diff = (current_graph.average_shortest_path_length -
-                         best_graph.average_shortest_path_length)
+            aspl_diff = (current_graph.aspl -
+                         best_graph.aspl)
             if ((diameter_diff < 0 and aspl_diff <= 0) or
                     (diameter_diff <= 0 and aspl_diff < 0)):
                 info("%s found %s", self.__class__.__name__, current_graph)

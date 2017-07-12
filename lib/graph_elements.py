@@ -2,9 +2,10 @@
 All elements of a graph.
 """
 
-from logging import debug
+from logging import debug, warning
 from random import shuffle
 from itertools import combinations
+from math import ceil
 
 
 
@@ -27,6 +28,18 @@ class Vertex(object):
         """
 
         self.edges_to = list()
+        """
+        The main data structure to represent edges.
+        This list contains vertices this vertex has edges to.
+        Accordingly, this vertex can be found in ``edges_to`` of the
+        vertices in ``edges_to`` (think: bidirectionally linked).
+        """
+
+        self.path_cache = dict()
+        """
+        A cache for found paths.
+        Maps targets to paths.
+        """
 
     def __hash__(self):
         return self.id
@@ -54,22 +67,66 @@ class GolfGraph(object):
     `the graph golf challenge <http://research.nii.ac.jp/graphgolf/>`__.
     """
 
+    @staticmethod
+    def lower_bounds(order, degree):
+        """
+        Returns the lower bound of the (diameter, average shortest path
+        length) for the given ``order`` and ``degree``.
+
+        Copied from http://research.nii.ac.jp/graphgolf/py/create-random.py
+        """
+
+        if order < 2:
+            warning("could not calculate lower bound for order %i"
+                    " (not implemented for order<2)", order)
+            return None, None
+
+        if order < 2:
+            warning("could not calculate lower bound for degree %i"
+                    " (not implemented for order<2)", degree)
+            return None, None
+
+        diameter = -1
+        aspl = 0.0
+        n = 1
+        r = 1
+        while True:
+            tmp = n + degree * pow(degree - 1, r - 1)
+            if tmp >= order:
+                break
+            n = tmp
+            aspl += r * degree * pow(degree - 1, r - 1)
+            diameter = r
+            r += 1
+        diameter += 1
+        aspl += diameter * (order - n)
+        aspl /= (order - 1)
+        return diameter, aspl
+
     def __init__(self, order, degree):
+
+        assert order > -1
+        assert degree > -1
+
         debug("initializing graph")
         self.order = order
         self.degree = degree
 
         # to be filled by ``self.analyze()``
         self.diameter = None
-        self.average_shortest_path_length = None
+        self.aspl = None
 
         # ``list`` because needs fast iteration
         self.vertices = [Vertex(i) for i in range(order)]
 
+        self.lower_bound_diameter, self.lower_bound_aspl = (
+            self.lower_bounds(order, degree)
+        )
+
     def __str__(self):
         bits = [
             self.__class__.__name__, str(hex(id(self))),
-            "ASPL=%s" % self.average_shortest_path_length or "n/a",
+            "ASPL=%s" % self.aspl or "n/a",
             "diameter=%s" % self.diameter or "n/a",
         ]
         return " ".join(bits)
@@ -214,7 +271,7 @@ class GolfGraph(object):
 
     def analyze(self):
         """
-        Sets instance attributes ``average_shortest_path_length`` and
+        Sets instance attributes ``aspl`` and
         ``diameter``.
 
         For an unconnected graph, we return all zeros or -
@@ -249,7 +306,7 @@ class GolfGraph(object):
         assert lengths_count > 0, "is this graph unconnected?"
 
         self.diameter = longest_shortest_path
-        self.average_shortest_path_length = lengths_sum/lengths_count
+        self.aspl = lengths_sum/lengths_count
 
     def edges(self):
         """
@@ -285,6 +342,24 @@ class GolfGraph(object):
 
         # copy analysis data
         dup.diameter = self.diameter
-        dup.average_shortest_path_length = self.average_shortest_path_length
+        dup.aspl = self.aspl
 
         return dup
+
+    def ideal(self):
+        """
+        Returns whether this graph is ideal, with respect to its diameter
+        and its average shortest path length.
+        """
+        if self.diameter is None or self.aspl is None:
+            self.analyze()
+
+        if self.diameter > self.lower_bound_diameter:
+            return False
+        assert self.diameter == self.lower_bound_diameter
+
+        if self.aspl > self.lower_bound_aspl:
+            return False
+        assert self.aspl == self.lower_bound_aspl
+
+        return True

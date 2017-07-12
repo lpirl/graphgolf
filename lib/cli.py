@@ -119,6 +119,10 @@ class Cli(object):
         Once an enhancer returns an enhanced graph, all enhancers are
         restarted therewith.
         """
+        lower_bound_diameter, lower_bound_aspl = self.best_graph.lower_bounds()
+        print("lower bound diameter:", lower_bound_diameter)
+        print("lower bound average shortest path length:", lower_bound_aspl)
+
         processes = []
         report_queue = SimpleQueue()
 
@@ -154,7 +158,7 @@ class Cli(object):
         #refactoring: maybe this should be moved to another/separate class?
         """
         assert self.best_graph.diameter is not None
-        assert self.best_graph.average_shortest_path_length is not None
+        assert self.best_graph.aspl is not None
 
         info("writing out best graph found")
 
@@ -163,7 +167,7 @@ class Cli(object):
             "order=%i" % self.best_graph.order,
             "degree=%i" % self.best_graph.degree,
             "diameter=%i" % self.best_graph.diameter,
-            "aspl=%f" % self.best_graph.average_shortest_path_length
+            "aspl=%f" % self.best_graph.aspl
         ))
         with open(filename, mode="w") as open_file:
             open_file.writelines(("%i %i\n" % (v1.id, v2.id)
