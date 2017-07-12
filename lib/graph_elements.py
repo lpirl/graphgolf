@@ -271,6 +271,8 @@ class GolfGraph(object):
         ``deepcopy`` of the ``copy`` module is no option, since it soon
         hits the maximum recursion depth.
         """
+        debug("duplicating %s", self)
+
         # create a fresh graph with fresh vertices
         dup = self.__class__(self.order, self.degree)
 

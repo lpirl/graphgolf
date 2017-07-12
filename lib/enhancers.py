@@ -49,12 +49,19 @@ class AbstractBaseEnhancer(object):
         """
         self.args = args
 
-    def enhance(self, best_graph):
+    def applicable_to(self, graph):
+        """
+        Returns Boolean, whether this enhancer is applicable to the
+        specified ``graph``.
+        """
+        return True
+
+    def enhance(self, best_graph, report_queue):
         """
         Tries to enhance a graph; possibly **IN PLACE**.
-        Returns an enhanced graph, and something else if that could not
-        be determined.
+        Puts an enhanced graph into the ``report_queue``, when found.
         """
+        info("enhancer %s started", self.__class__.__name__)
 
         # pointless to do anything for completely connected graph
         if best_graph.order-1 <= best_graph.degree:
@@ -62,26 +69,25 @@ class AbstractBaseEnhancer(object):
             return
 
         while True:
+
+            # get a modified graph
             current_graph = best_graph.duplicate()
             current_graph = self.modify_graph(current_graph)
+
             if not current_graph:
                 info("%s did not return a graph", self.__class__.__name__)
                 return
+
+            # analyze
             current_graph.analyze()
             diameter_diff = current_graph.diameter - best_graph.diameter
             aspl_diff = (current_graph.average_shortest_path_length -
                          best_graph.average_shortest_path_length)
             if ((diameter_diff < 0 and aspl_diff <= 0) or
                     (diameter_diff <= 0 and aspl_diff < 0)):
-                print(current_graph, "by", self.__class__.__name__)
-                return current_graph
-
-    @staticmethod
-    def _report(graph):
-        """
-        Called to report a better graph application-wide.
-        """
-        pass # TODO
+                info("%s found %s", self.__class__.__name__, current_graph)
+                report_queue.put(current_graph)
+                return
 
     @staticmethod
     def modify_graph(graph):
@@ -100,20 +106,31 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
     PERCENTAGE = None
     """to be set by subclasses"""
 
+    @classmethod
+    def _get_number_of_edges_to_replace(cls, graph):
+        return int(cls.PERCENTAGE * (len(graph.vertices)/100))
+
+    def applicable_to(self, graph):
+        """
+        Returns Boolean, whether this enhancer is applicable to the
+        specified ``graph``.
+        If we disconnect just one vertex, we'll reconnect it to the
+        same other vertex. Pointless. So we require at least 2 vertices
+        to be re-connected per iteration.
+        """
+        return self._get_number_of_edges_to_replace(graph) >= 2
+
     def modify_graph(self, graph):
         """
         Chooses PERCENT random vertices removes their "first" edge and
         adds another one.
         """
-        vertices = graph.vertices
-        sample_size = int(self.PERCENTAGE * (len(vertices)/100))
 
+        assert self.applicable_to(graph)
         assert graph.order > graph.degree-1
-        # If we disconnect just one vertex, we'll reconnect it to the
-        # same other vertex. Pointless.
-        if sample_size < 2:
-            info("graph to small for %s", self.__class__.__name__)
-            return
+
+        vertices = graph.vertices
+        sample_size = self._get_number_of_edges_to_replace(graph)
 
         sampled_vertices = sample(vertices, sample_size)
         consider_when_relinking = []

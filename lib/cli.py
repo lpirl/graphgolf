@@ -6,11 +6,10 @@ program.
 # encoding: UTF-8
 
 from sys import argv
-from os import getpid, fork, waitpid, kill
-from signal import SIGKILL
+from os import wait
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
-from multiprocessing import Array as SharedArray
+from multiprocessing import Process, SimpleQueue
 
 from lib.enhancers import EnhancerRegistry
 from lib.graph_elements import GolfGraph
@@ -42,8 +41,6 @@ class Cli(object):
         self._init_enhancers()
         self.args = None
         self.best_graph = None
-        self.controller_pid = None
-        self.children_pids = None
 
     def _init_arg_parser(self):
         self.arg_parser = ArgumentParser(
@@ -78,14 +75,6 @@ class Cli(object):
         for handler in logger.handlers:
             handler.setFormatter(formatter)
 
-    @property
-    def is_controller(self):
-        """
-        Returns whether this (instance in this) process is the controller
-        process.
-        """
-        return getpid() == self.controller_pid
-
     def _parse_args(self):
         debug("parsing command line arguments")
 
@@ -107,69 +96,49 @@ class Cli(object):
         """
         debug("starting to run")
         self._parse_args()
-        self.children_pids = SharedArray("i", len(self.enhancers))
         graph = GolfGraph(self.args.order, self.args.degree)
         graph.add_as_many_random_edges_as_possible()
         graph.analyze()
         print("initial graph:", graph)
         self.best_graph = graph
 
-        self._control()
+        try:
+            self._run()
+        except KeyboardInterrupt:
+            # todo: write to file?
+            for vertex_a, vertex_b in self.best_graph.edges():
+                print(vertex_a.id, vertex_b.id)
 
-    def _control(self):
+    def _run(self):
         """
-        Does what a controller does: fork working children, and  wait
-        for them to finish.
-        The child that first finds an enhanced graphs takes over the role
-        of the controller.
-        This avoids inter-process communication by copying the graph via
-        ``fork()``.
+        Tries to enhance the ``self.best_graph`` forever.
+        Once an enhancer returns an enhanced graph, all enhancers are
+        restarted therewith.
         """
-        # ``while True`` avoids infinite recursions of ``_control``.
+        processes = []
+        report_queue = SimpleQueue()
+
         while True:
-            self.controller_pid = getpid()
-            for child_i, enhancer in enumerate(self.enhancers[:]):
 
-                #############################
-                # code for controller process
-                #
-                child_pid = fork()
-                if child_pid:
-                    self.children_pids[child_i] = child_pid
-                    continue
-                assert self.is_controller is False
-                #
-                #############################
+            # create processes
+            for enhancer in self.enhancers:
+                if enhancer.applicable_to(self.best_graph):
+                    processes.append(
+                        Process(target=enhancer.enhance,
+                                args=(self.best_graph, report_queue))
+                    )
 
-                #############################
-                # code for child process
-                #
-                self.best_graph = enhancer.enhance(self.best_graph)
-                if not self.best_graph:
-                    info("exited without finding a better graph")
-                    self.enhancers.remove(enhancer)
-                    self.children_pids[child_i] = 0
-                    exit(0)
+            # start processes
+            for process in processes:
+                debug("starting %s", process)
+                process.start()
 
-                for child_i_to_kill, pid in enumerate(self.children_pids):
-                    if pid == 0:
-                        # already dead
-                        continue
-                    elif child_i != child_i_to_kill:
-                        debug("child kills sibling %i", pid)
-                        self.children_pids[child_i_to_kill] = 0
-                        kill(pid, SIGKILL)
+            # wait for any of them
+            self.best_graph = report_queue.get()
+            print(self.best_graph)
 
-                # by breaking this (controller) loop (as child), we
-                # basically take over control
-                break
-                #
-                #############################
-
-            # controller spawned all processes
-            if self.is_controller:
-                #~ for pid in self.children_pids:
-                    #~ if pid:
-                        #~ debug("controller waits for child %i", pid)
-                        #~ waitpid(pid, 0)
-                exit(0)
+            # kill the rest
+            while processes:
+                process = processes.pop()
+                debug("terminating %s", process)
+                process.terminate()
