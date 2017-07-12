@@ -250,3 +250,17 @@ class GolfGraphTest(BaseTest):
         self.assertEqual(4, len(edges))
         self.assertIn((graph.vertices[1], graph.vertices[2]), edges)
         self.assertNotIn((graph.vertices[0], graph.vertices[2]), edges)
+
+    def test_ideal_true(self):
+        """
+        Tests whether ``ideal()`` does what we expect.
+        """
+        # the function ``lower_bounds`` is quite crappy and does not
+        # calculate correct values for edge cases. A "rectangle graph"
+        # is the smallest graph supported.
+
+        graph = self.rectangle_graph()
+        self.assertTrue(graph.ideal())
+        graph.remove_edge_unsafe(graph.vertices[1], graph.vertices[2])
+        graph.analyze()
+        self.assertFalse(graph.ideal())

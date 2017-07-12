@@ -81,9 +81,9 @@ class GolfGraph(object):
                     " (not implemented for order<2)", order)
             return None, None
 
-        if order < 2:
+        if degree < 2:
             warning("could not calculate lower bound for degree %i"
-                    " (not implemented for order<2)", degree)
+                    " (not implemented for degree<2)", degree)
             return None, None
 
         diameter = -1
