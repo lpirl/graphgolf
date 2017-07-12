@@ -176,14 +176,11 @@ class Cli(object):
 
         #refactoring: maybe this should be moved to another/separate class?
         """
-        assert self.args.edges is not None
         add_edge_unsafe = self.best_graph.add_edge_unsafe
         with open(self.args.edges, "r") as open_file:
             for line in open_file.readlines():
                 line = line.strip()
                 vertex_a_id, vertex_b_id = line.split(" ")
-                assert vertex_a_id.isdigit()
-                assert vertex_b_id.isdigit()
                 self.best_graph.add_edge_unsafe(
                     self.best_graph.vertices[int(vertex_a_id)],
                     self.best_graph.vertices[int(vertex_b_id)],
