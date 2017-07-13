@@ -105,8 +105,15 @@ class Cli(object):
         else:
             self.best_graph.add_as_many_random_edges_as_possible()
 
+        print("lower bound diameter:",
+              self.best_graph.diameter_lower_bound)
+        print("lower bound average shortest path length:",
+              self.best_graph.aspl_lower_bound)
+
         self.best_graph.analyze()
         print("initial graph:", self.best_graph)
+
+        exit(0)
 
         try:
             self._run()
@@ -119,9 +126,6 @@ class Cli(object):
         Once an enhancer returns an enhanced graph, all enhancers are
         restarted therewith.
         """
-        lower_bound_diameter, lower_bound_aspl = self.best_graph.lower_bounds()
-        print("lower bound diameter:", lower_bound_diameter)
-        print("lower bound average shortest path length:", lower_bound_aspl)
 
         processes = []
         report_queue = SimpleQueue()

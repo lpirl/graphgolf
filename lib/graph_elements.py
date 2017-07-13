@@ -35,10 +35,10 @@ class Vertex(object):
         vertices in ``edges_to`` (think: bidirectionally linked).
         """
 
-        self.path_cache = dict()
+        self.shortest_path_cache = dict()
         """
         A cache for found paths.
-        Maps targets to paths.
+        Maps target vertices to shortest paths.
         """
 
     def __hash__(self):
@@ -67,14 +67,56 @@ class GolfGraph(object):
     `the graph golf challenge <http://research.nii.ac.jp/graphgolf/>`__.
     """
 
-    @staticmethod
-    def lower_bounds(order, degree):
+    def __init__(self, order, degree):
+        debug("initializing graph")
+
+        assert order > -1
+        assert degree > -1
+
+        self.order = order
+        self.degree = degree
+
+        self._aspl_lower_bound = None
+        self._diameter_lower_bound = None
+
+        # to be filled by ``self.analyze()``
+        self.diameter = None
+        self.aspl = None
+
+        # ``list`` because needs fast iteration
+        self.vertices = [Vertex(i) for i in range(order)]
+
+        self.modified_vertices = set()
+        """
+        In this set, we can collect modified vertices, for which we
+        have to invalidate the shortest path caches later on.
+        That way, we can invalidate the caches all at once instead of
+        upon every modification of edges.
+        """
+
+    def __str__(self):
+        bits = [
+            self.__class__.__name__, str(hex(id(self))),
+            "ASPL=%s" % self.aspl or "n/a",
+            "diameter=%s" % self.diameter or "n/a",
+        ]
+        return " ".join(bits)
+
+
+    def _calculate_lower_bounds(self):
         """
         Returns the lower bound of the (diameter, average shortest path
         length) for the given ``order`` and ``degree``.
 
         Copied from http://research.nii.ac.jp/graphgolf/py/create-random.py
         """
+
+        assert (self._aspl_lower_bound is None and
+                self._diameter_lower_bound is None,
+                "lower bounds already calculated")
+
+        order = self.order
+        degree = self.degree
 
         if order < 2:
             warning("could not calculate lower bound for order %i"
@@ -101,39 +143,38 @@ class GolfGraph(object):
         diameter += 1
         aspl += diameter * (order - n)
         aspl /= (order - 1)
-        return diameter, aspl
 
-    def __init__(self, order, degree):
+        self._aspl_lower_bound = aspl
+        self._diameter_lower_bound = diameter
 
-        assert order > -1
-        assert degree > -1
+    @property
+    def aspl_lower_bound(self):
+        """
+        Returns the lower bound for the average shortest path length for
+        this graph.
+        Be aware, that for low values of ``order`` and ``degree``, this
+        might return ``None``, due to a lack of implementation.
+        """
+        if not self._aspl_lower_bound:
+            self._calculate_lower_bounds()
+        return self._aspl_lower_bound
 
-        debug("initializing graph")
-        self.order = order
-        self.degree = degree
-
-        # to be filled by ``self.analyze()``
-        self.diameter = None
-        self.aspl = None
-
-        # ``list`` because needs fast iteration
-        self.vertices = [Vertex(i) for i in range(order)]
-
-        self.lower_bound_diameter, self.lower_bound_aspl = (
-            self.lower_bounds(order, degree)
-        )
-
-    def __str__(self):
-        bits = [
-            self.__class__.__name__, str(hex(id(self))),
-            "ASPL=%s" % self.aspl or "n/a",
-            "diameter=%s" % self.diameter or "n/a",
-        ]
-        return " ".join(bits)
+    @property
+    def diameter_lower_bound(self):
+        """
+        Returns the lower bound for the diameter for this graph.
+        Be aware, that for low values of ``order`` and ``degree``, this
+        might return ``None``, due to a lack of implementation.
+        """
+        if not self._diameter_lower_bound:
+            self._calculate_lower_bounds()
+        return self._diameter_lower_bound
 
     def add_edge_unsafe(self, vertex_a, vertex_b):
         """
         Adds an edge between the two given vertices w/o checking constraints.
+
+        Called very often, keep minimal.
         """
         assert vertex_a in self.vertices
         assert vertex_b in self.vertices
@@ -147,6 +188,8 @@ class GolfGraph(object):
     def remove_edge_unsafe(self, vertex_a, vertex_b):
         """
         Removes an edge between the two given vertices w/o checking anything.
+
+        Called very often, keep minimal.
         """
         debug("de-wiring %s and %s", vertex_a, vertex_b)
         assert vertex_a in self.vertices
@@ -221,14 +264,21 @@ class GolfGraph(object):
                     self.add_edge_unsafe(vertex_a, vertex_b)
                     break
 
-    @staticmethod
-    def shortest_path(vertex_a, vertex_b):
+    def shortest_path(self, vertex_a, vertex_b):
         """
         Returns the shortest path from ``vertex_a`` to ``vertex_b``.
         Breadth-First search.
+
+        Called very often, keep efficient.
         """
         debug("searching shortest path between %s and %s", vertex_a,
               vertex_b)
+
+        assert len(self.modified_vertices) == 0
+
+        # this is where we'll store the shortest path in
+        # (excluding the departure, but including the destination vertex)
+        path = []
 
         # ``set`` because needs fast lookup:
         ever_enqueued = {vertex_a}
@@ -237,8 +287,8 @@ class GolfGraph(object):
         # (to not descend accidentally while doing breadth-first search):
         currently_enqueued = [vertex_a]
 
-        # unset breadcrumb at departure vertex that might be left over
-        # previous searches
+        # unset breadcrumb at departure vertex (it might be not ``None``
+        # from previous searches)
         vertex_a.breadcrumb = None
 
         # non-recursive breadth-first walk the graph and lay breadcrumbs
@@ -246,8 +296,11 @@ class GolfGraph(object):
         currently_visiting = None
         while currently_enqueued:
             currently_visiting = currently_enqueued.pop(0)
+
+            # check if we arrived at the target vertex
             if currently_visiting == vertex_b:
                 break
+
             for edge_to in currently_visiting.edges_to:
                 if edge_to not in ever_enqueued:
                     edge_to.breadcrumb = currently_visiting
@@ -255,11 +308,16 @@ class GolfGraph(object):
                     currently_enqueued.append(edge_to)
 
         # follow back the breadcrumbs and remember the path this time
-        path = []
+        # along the way, fill caches for shortest paths
         while currently_visiting is not None:
-            path.append(currently_visiting)
+            path.insert(0, currently_visiting)
+
+            # fill the shortest path cache:
+            if vertex_b not in currently_visiting.shortest_path_cache:
+                currently_visiting.shortest_path_cache[vertex_b] = path.copy()
+
+            # move on (i.e., continue to follow the breadcrumbs back)
             currently_visiting = currently_visiting.breadcrumb
-        path.reverse()
 
         return path
 
@@ -288,10 +346,12 @@ class GolfGraph(object):
         (a + b + ...) / [count]
         """
         debug("analyzing graph")
-        if not self.vertices:
-            raise RuntimeError(
-                "Don't know how to analyze an empty graph."
-            )
+
+        assert bool(self.vertices), "cannot analyze graph w/o vertices"
+        assert (self.aspl is None and self.diameter is None,
+                "Found cached analysis data. This incident either "
+                "suggests an class-internal bug or incorrect usage.")
+
         longest_shortest_path = -1
         lengths_sum = 0
         lengths_count = 0
@@ -333,6 +393,12 @@ class GolfGraph(object):
         # create a fresh graph with fresh vertices
         dup = self.__class__(self.order, self.degree)
 
+        # copy over shortest path caches
+        for dup_vertex, self_vertex in zip(dup.vertices, self.vertices):
+            dup_vertex.shortest_path_cache = (
+                self_vertex.shortest_path_cache.copy()
+            )
+
         # duplicate edges
         for vertex_a, vertex_b in self.edges():
             dup.add_edge_unsafe(
@@ -354,12 +420,35 @@ class GolfGraph(object):
         if self.diameter is None or self.aspl is None:
             self.analyze()
 
-        if self.diameter > self.lower_bound_diameter:
+        if self.diameter > self.diameter_lower_bound:
             return False
-        assert self.diameter == self.lower_bound_diameter
+        assert self.diameter == self.diameter_lower_bound
 
-        if self.aspl > self.lower_bound_aspl:
+        if self.aspl > self.aspl_lower_bound:
             return False
-        assert self.aspl == self.lower_bound_aspl
+        assert self.aspl == self.aspl_lower_bound
 
         return True
+
+    def _invalidate_analysis_data(self):
+        """
+        Unsets "cached" analysis data.
+        Meant to be called (once) when modifying a graph.
+        """
+        assert self.aspl is not None, "analysis data already invalidated"
+        assert self.diameter is not None, "analysis data already invalidated"
+        self.aspl = None
+        self.diameter = None
+
+    def invalidate_shortest_path_caches(self):
+        """
+        Unsets cached shortests paths relating to the given
+        ``modified_vertices``.
+        """
+        # TODO: in favor of lower complexity, we just drop all caches
+        # for now. One could implement a more fine-grained dropping of
+        # caches and see (i.e., measure) if that is actually more efficient.
+        assert len(self.modified_vertices) > 0, "no vertices modified"
+        for vertex in self.vertices:
+            vertex.shortest_path_cache.clear()
+        self.modified_vertices.clear()
