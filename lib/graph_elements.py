@@ -10,10 +10,7 @@ from itertools import combinations
 
 class Vertex(object):
     """
-    A node in a graph.
-
-    We keep this minimal since we'll have a lot of vertices in memory.
-    Therefore, most logic is implemented in ``GolfGraph``.
+    A vertex in a graph.
     """
 
     def __init__(self, id):
@@ -41,9 +38,11 @@ class Vertex(object):
         """
 
     def __hash__(self):
+        """ Called very very often, avoid adding logic. """
         return self.id
 
     def __eq__(self, other):
+        """ Called very very often, avoid adding logic. """
         return self.id == other.id
 
     def __lt__(self, other):
