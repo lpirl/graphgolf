@@ -515,6 +515,8 @@ class GolfGraph(object):
         for vertex in self.vertices:
 
             # this is where we store what to invalidate later on:
+            # (this pattern avoids copying the hops cache, what would
+            # be necessary to modify it while iterating over its elements)
             keys_to_invalidate = set()
 
             # loop over all cache entries of that vertex:
