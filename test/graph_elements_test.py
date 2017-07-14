@@ -97,19 +97,23 @@ class GolfGraphTest(BaseTest):
         """
 
         # some common cases: negative, zero, odd, even, small, big
-        orders = (1, 3, 4, 32, 33)
+        orders = (3, 4, 32, 33)
         degrees = (2, 3, 4, 32, 33)
 
         for order in orders:
             for degree in degrees:
                 graph = GolfGraph(order, degree)
                 graph.add_as_many_random_edges_as_possible()
+                vertices_with_unused_ports = set()
                 for vertex in graph.vertices:
                     edges_to = vertex.edges_to
 
                     # no more edges_to vertices than the degree allows for
-                    if degree >= 0:
-                        self.assertTrue(len(edges_to) <= degree)
+                    self.assertTrue(len(edges_to) <= degree)
+
+                    # not fewer connections than allowed (if applicable)
+                    if len(edges_to) < degree:
+                        vertices_with_unused_ports.add(vertex)
 
                     # no self-connections
                     self.assertNotIn(vertex, edges_to)
@@ -117,48 +121,38 @@ class GolfGraphTest(BaseTest):
                     # no duplicates in edges_to vertices
                     self.assertEqual(len(edges_to), len(set(edges_to)))
 
-    def test_shortest_path_one_vertex(self):
-        """
-        Asserts shortest path computation for graph with one vertex.
-        """
-        graph = GolfGraph(1, 1)
-        graph.add_as_many_random_edges_as_possible()
-        vertex = graph.vertices[0]
-        self.assertEqual(graph.vertices,
-                         graph.shortest_path(vertex, vertex))
+                if (order - 1) == degree:
+                    self.assertTrue(len(vertices_with_unused_ports) < 2)
 
-    def test_shortest_path_two_vertices(self):
+    def test_hops_two_vertices(self):
         """
         Asserts shortest path computation for graph with two vertices.
         """
-        graph = GolfGraph(2, 1)
+        graph = GolfGraph(2, 2)
         graph.add_as_many_random_edges_as_possible()
-        self.assertEqual(graph.vertices,
-                         graph.shortest_path(*graph.vertices))
+        self.assertEqual([], graph.hops(*graph.vertices))
 
-    def test_shortest_path_line(self):
+    def test_hops_line(self):
         """
         Asserts shortest path computation for a 'line graph' with 3 vertices.
         """
         graph = self.line_graph()
         vertices = graph.vertices
-        self.assertEqual([vertices[0], vertices[1]],
-                         graph.shortest_path(vertices[0], vertices[1]))
-        self.assertEqual([vertices[1], vertices[2]],
-                         graph.shortest_path(vertices[1], vertices[2]))
-        self.assertEqual([vertices[0], vertices[1], vertices[2]],
-                         graph.shortest_path(vertices[0], vertices[2]))
+        self.assertEqual([], graph.hops(vertices[0], vertices[1]))
+        self.assertEqual([], graph.hops(vertices[1], vertices[2]))
+        self.assertEqual([vertices[1]],
+                         graph.hops(vertices[0], vertices[2]))
 
-    def test_shortest_path_triangle(self):
+    def test_hops_triangle(self):
         """
         Asserts shortest path computation for a 'triangle graph'.
         """
         graph = self.triangle_graph()
 
         for edge in permutations(graph.vertices, 2):
-            self.assertEqual(list(edge), graph.shortest_path(*edge))
+            self.assertEqual([], graph.hops(*edge))
 
-    def test_shortest_path_fully_connected(self):
+    def test_hops_fully_connected(self):
         """
         Asserts shortest path computation for some fully connected graphs.
         """
@@ -167,6 +161,9 @@ class GolfGraphTest(BaseTest):
             graph = GolfGraph(order, degree)
             graph.add_as_many_random_edges_as_possible()
             graph.analyze()
+            if graph.diameter > 1:
+                import pdb
+                pdb.set_trace()
             self.assertEqual(1, graph.diameter)
             self.assertEqual(1, graph.aspl)
 
@@ -226,8 +223,8 @@ class GolfGraphTest(BaseTest):
         graph = self.rectangle_graph()
         vertices = graph.vertices
         graph.remove_edge_unsafe(vertices[0], vertices[-1])
-        self.assertEqual(vertices,
-                         graph.shortest_path(vertices[0], vertices[-1]))
+        self.assertEqual(vertices[1:-1],
+                         graph.hops(vertices[0], vertices[-1]))
 
     def test_duplicate_rectangle(self):
         """

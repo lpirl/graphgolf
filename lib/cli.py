@@ -113,8 +113,6 @@ class Cli(object):
         self.best_graph.analyze()
         print("initial graph:", self.best_graph)
 
-        exit(0)
-
         try:
             self._run()
         except KeyboardInterrupt:
@@ -184,7 +182,6 @@ class Cli(object):
 
         #refactoring: maybe this should be moved to another/separate class?
         """
-        add_edge_unsafe = self.best_graph.add_edge_unsafe
         with open(self.args.edges, "r") as open_file:
             for line in open_file.readlines():
                 line = line.strip()

@@ -5,7 +5,6 @@ All elements of a graph.
 from logging import debug, warning
 from random import shuffle
 from itertools import combinations
-from math import ceil
 
 
 
@@ -35,9 +34,9 @@ class Vertex(object):
         vertices in ``edges_to`` (think: bidirectionally linked).
         """
 
-        self.shortest_path_cache = dict()
+        self.hops_cache = dict()
         """
-        A cache for found paths.
+        A cache for found paths. Stores only intermediate hops.
         Maps target vertices to shortest paths.
         """
 
@@ -65,16 +64,20 @@ class GolfGraph(object):
     """
     A graph specifically crafted for
     `the graph golf challenge <http://research.nii.ac.jp/graphgolf/>`__.
+
+    Partly due to the specifics of the challenge linked above, partly
+    due to limitations of the implementation, the graph needs to be of
+    ``order`` and ``degree`` of at least two.
     """
 
     def __init__(self, order, degree):
         debug("initializing graph")
 
-        assert order > -1
-        assert degree > -1
+        assert order > 1, "graphs of order < 2 not supported"
+        assert degree > 1, "graphs of degree < 2 not supported"
 
-        self.order = order
-        self.degree = degree
+        self._order = order
+        self._degree = degree
 
         self._aspl_lower_bound = None
         self._diameter_lower_bound = None
@@ -88,10 +91,12 @@ class GolfGraph(object):
 
         self.modified_vertices = set()
         """
-        In this set, we can collect modified vertices, for which we
-        have to invalidate the shortest path caches later on.
+        Herein we collect modified vertices, for which we have to
+        invalidate the hops caches later on.
         That way, we can invalidate the caches all at once instead of
         upon every modification of edges.
+        We use set, since adding elements is faster and we do not care
+        about the order.
         """
 
     def __str__(self):
@@ -102,6 +107,21 @@ class GolfGraph(object):
         ]
         return " ".join(bits)
 
+    @property
+    def order(self):
+        """
+        Making ``order`` a property via this getter prevents accidental
+        modification of the attribute outside ``__init__``.
+        """
+        return self._order
+
+    @property
+    def degree(self):
+        """
+        Making ``degree`` a property via this getter prevents accidental
+        modification of the attribute outside ``__init__``.
+        """
+        return self._degree
 
     def _calculate_lower_bounds(self):
         """
@@ -111,12 +131,12 @@ class GolfGraph(object):
         Copied from http://research.nii.ac.jp/graphgolf/py/create-random.py
         """
 
-        assert (self._aspl_lower_bound is None and
-                self._diameter_lower_bound is None,
-                "lower bounds already calculated")
+        assert self._aspl_lower_bound is None and \
+               self._diameter_lower_bound is None, \
+               "lower bounds already calculated"
 
-        order = self.order
-        degree = self.degree
+        order = self._order
+        degree = self._degree
 
         if order < 2:
             warning("could not calculate lower bound for order %i"
@@ -174,7 +194,7 @@ class GolfGraph(object):
         """
         Adds an edge between the two given vertices w/o checking constraints.
 
-        Called very often, keep minimal.
+        Called often, keep minimal.
         """
         assert vertex_a in self.vertices
         assert vertex_b in self.vertices
@@ -182,6 +202,8 @@ class GolfGraph(object):
         debug("wiring %s and %s", vertex_a, vertex_b)
         vertex_a.edges_to.append(vertex_b)
         vertex_b.edges_to.append(vertex_a)
+        self.modified_vertices.add(vertex_a)
+        self.modified_vertices.add(vertex_b)
         assert len(vertex_a.edges_to) <= self.degree
         assert len(vertex_b.edges_to) <= self.degree
 
@@ -189,7 +211,7 @@ class GolfGraph(object):
         """
         Removes an edge between the two given vertices w/o checking anything.
 
-        Called very often, keep minimal.
+        Called often, keep minimal.
         """
         debug("de-wiring %s and %s", vertex_a, vertex_b)
         assert vertex_a in self.vertices
@@ -197,6 +219,8 @@ class GolfGraph(object):
         assert vertex_a != vertex_b, "vertex should not have edge to itself"
         vertex_a.edges_to.remove(vertex_b)
         vertex_b.edges_to.remove(vertex_a)
+        self.modified_vertices.add(vertex_a)
+        self.modified_vertices.add(vertex_b)
 
     def add_as_many_random_edges_as_possible(self, limit_to_vertices=None):
         """
@@ -208,8 +232,14 @@ class GolfGraph(object):
         """
         debug("connecting graph randomly")
 
-        degree = self.degree
+        degree = self._degree
+
         overall_vertices = limit_to_vertices or list(self.vertices)
+        """
+        A list of vertices that we consider in this method.
+        Vertices which were found with no ports left will be removed
+        during the execution of this method.
+        """
 
         # repeat ``degree`` times
         for _ in range(degree):
@@ -218,6 +248,11 @@ class GolfGraph(object):
                 break
 
             current_vertices = list(overall_vertices)
+            """
+            The list of vertices to add edges to in this 'round'
+            (i.e. 'for this degree').
+            """
+
             shuffle(current_vertices)
 
             # repeat until no(t enough) vertices left
@@ -228,10 +263,12 @@ class GolfGraph(object):
 
                 # honor degree at vertex a
                 if len(vertex_a.edges_to) == degree:
-                    debug("vertex a has no ports left")
+                    debug("no ports left")
                     try:
-                        # the vertex might be removed already, if it was
-                        # found as a "vertex_b" with no ports left
+                        # The vertex might be removed already, if it was
+                        # found as a "vertex_b" with no ports left.
+                        # Since this is usually not the case, we use
+                        # the slow try/except as an "optimistic" approach.
                         overall_vertices.remove(vertex_a)
                     except ValueError:
                         pass
@@ -239,46 +276,59 @@ class GolfGraph(object):
                 assert len(vertex_a.edges_to) < degree
 
                 # search for a vertex to connect to
-                for vertex_b in current_vertices:
+                # (we iterate via an index to be able to modify the list
+                # we iterate over (current_vertices) in place; avoids
+                # copying the whole thing.)
+                vertex_b_i = 0
+                while vertex_b_i < len(current_vertices):
+                    vertex_b = current_vertices[vertex_b_i]
 
                     # honor degree at vertex b
                     if len(vertex_b.edges_to) == degree:
-                        debug("vertex b has no ports left")
-                        # discouraged
-                        current_vertices.remove(vertex_b)
+                        debug("vertex b (%s) has no ports left", vertex_b)
                         overall_vertices.remove(vertex_b)
+                        current_vertices.pop(vertex_b_i)
                         continue
                     assert len(vertex_b.edges_to) < degree
 
-                    # do not add self-edges
-                    if vertex_a == vertex_b:
-                        debug("vertices are the same")
-                        continue
-
                     # do not add edges_to that already exist
                     if vertex_b in vertex_a.edges_to:
-                        debug("vertices already connected")
+                        debug("vertex b (%s) already connected", vertex_b)
+                        vertex_b_i += 1
                         continue
 
                     # no constraints violated, let's connect to this vertex
                     self.add_edge_unsafe(vertex_a, vertex_b)
                     break
 
-    def shortest_path(self, vertex_a, vertex_b):
+    def hops(self, vertex_a, vertex_b):
         """
-        Returns the shortest path from ``vertex_a`` to ``vertex_b``.
-        Breadth-First search.
+        Returns a minimal number of hops (Breadth-First search) to get
+        from ``vertex_a`` to ``vertex_b`` (``vertex_a`` != ``vertex_b``).
+        Returns an empty list if ``vertex_a`` and ``vertex_b`` are
+        directly connected with an edge.
+        Returns ``None`` if no path between ``vertex_a`` and ``vertex_b``
+        could be found.
+
+        Raises assertion errors on invalid input. We chose assertions
+        because they are skipped when running the interpreter with -O.
+        Design your calling code to not call this with invalid input.
 
         Called very often, keep efficient.
         """
         debug("searching shortest path between %s and %s", vertex_a,
               vertex_b)
 
-        assert len(self.modified_vertices) == 0
+        assert vertex_a != vertex_b, \
+               "won't search hops between a vertex and itself..."
 
-        # this is where we'll store the shortest path in
-        # (excluding the departure, but including the destination vertex)
-        path = []
+        assert len(vertex_a.edges_to) > 0, \
+               "can't search hops for a vertex without any edges"
+
+        # check if we can serve the request from the cache
+        if vertex_b in vertex_a.hops_cache:
+            debug("hops cache hit")
+            return vertex_a.hops_cache[vertex_b]
 
         # ``set`` because needs fast lookup:
         ever_enqueued = {vertex_a}
@@ -306,26 +356,40 @@ class GolfGraph(object):
                     edge_to.breadcrumb = currently_visiting
                     ever_enqueued.add(edge_to)
                     currently_enqueued.append(edge_to)
+                    continue
 
-        # follow back the breadcrumbs and remember the path this time
-        # along the way, fill caches for shortest paths
-        while currently_visiting is not None:
-            path.insert(0, currently_visiting)
+        # check if vertex_b was reachable at all
+        assert currently_visiting == vertex_b, \
+               "%s appears to be unreachable from %s" % (
+                    vertex_b, vertex_a
+                )
 
-            # fill the shortest path cache:
-            if vertex_b not in currently_visiting.shortest_path_cache:
-                currently_visiting.shortest_path_cache[vertex_b] = path.copy()
+        # follow back the breadcrumbs and remember the hops taken
+        # (excluding departure and destination)
+        hops = []
+        currently_visiting = currently_visiting.breadcrumb
+        while currently_visiting.breadcrumb is not None:
+
+            # fill the hops cache:
+            if vertex_b not in currently_visiting.hops_cache:
+                currently_visiting.hops_cache[vertex_b] = hops.copy()
+
+            # remember this vertex as hop
+            hops.insert(0, currently_visiting)
 
             # move on (i.e., continue to follow the breadcrumbs back)
             currently_visiting = currently_visiting.breadcrumb
 
-        return path
+        return hops
 
-    def shortest_path_length(self, vertex_a, vertex_b):
+    def hops_count(self, vertex_a, vertex_b):
         """
-        Returns the shortest path length from ``vertex_a`` to ``vertex_b``.
+        Returns the minimum number of hops to get from ``vertex_a`` to
+        ``vertex_b``.
+        Returns ``None`` if there is no connection between ``vertex_a``
+        and ``vertex_b``.
         """
-        return len(self.shortest_path(vertex_a, vertex_b)) - 1
+        return len(self.hops(vertex_a, vertex_b)) + 1
 
     def analyze(self):
         """
@@ -348,16 +412,15 @@ class GolfGraph(object):
         debug("analyzing graph")
 
         assert bool(self.vertices), "cannot analyze graph w/o vertices"
-        assert (self.aspl is None and self.diameter is None,
-                "Found cached analysis data. This incident either "
-                "suggests an class-internal bug or incorrect usage.")
+
+        self._invalidate_caches()
 
         longest_shortest_path = -1
         lengths_sum = 0
         lengths_count = 0
 
         for vertex_a, vertex_b in combinations(self.vertices, 2):
-            length = self.shortest_path_length(vertex_a, vertex_b)
+            length = self.hops_count(vertex_a, vertex_b)
             longest_shortest_path = max(longest_shortest_path, length)
             lengths_sum += length
             lengths_count += 1
@@ -395,8 +458,8 @@ class GolfGraph(object):
 
         # copy over shortest path caches
         for dup_vertex, self_vertex in zip(dup.vertices, self.vertices):
-            dup_vertex.shortest_path_cache = (
-                self_vertex.shortest_path_cache.copy()
+            dup_vertex.hops_cache = (
+                self_vertex.hops_cache.copy()
             )
 
         # duplicate edges
@@ -430,25 +493,42 @@ class GolfGraph(object):
 
         return True
 
-    def _invalidate_analysis_data(self):
+    def _invalidate_caches(self):
         """
-        Unsets "cached" analysis data.
-        Meant to be called (once) when modifying a graph.
+        Invalidates internally cached values.
+
+        This is quite expensive. Consider wisely when calling this.
         """
-        assert self.aspl is not None, "analysis data already invalidated"
-        assert self.diameter is not None, "analysis data already invalidated"
+
         self.aspl = None
         self.diameter = None
 
-    def invalidate_shortest_path_caches(self):
-        """
-        Unsets cached shortests paths relating to the given
-        ``modified_vertices``.
-        """
-        # TODO: in favor of lower complexity, we just drop all caches
-        # for now. One could implement a more fine-grained dropping of
-        # caches and see (i.e., measure) if that is actually more efficient.
         assert len(self.modified_vertices) > 0, "no vertices modified"
+
+        # We look into the hops caches of all vertices. If we find a
+        # modified vertex as target or as hop, we drop that cache item.
+
+        # loop over all vertices (we have to check *all* the caches):
         for vertex in self.vertices:
-            vertex.shortest_path_cache.clear()
-        self.modified_vertices.clear()
+
+            # this is where we store what to invalidate later on:
+            keys_to_invalidate = set()
+
+            # loop over all cache entries of that vertex:
+            for target, hops in vertex.hops_cache.items():
+
+                # check if the target of that cache entry is a modified
+                # vertex
+                if target in self.modified_vertices:
+                    keys_to_invalidate.add(target)
+                    break
+
+                # check if a modified vertex is within the hops
+                for hop in hops:
+                    if hop in self.modified_vertices:
+                        keys_to_invalidate.add(target)
+                        break
+
+            # now actually clear items from the vertex' cache
+            for key_to_invalidate in keys_to_invalidate:
+                del vertex.hops_cache[key_to_invalidate]
