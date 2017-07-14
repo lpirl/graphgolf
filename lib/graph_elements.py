@@ -29,6 +29,9 @@ class Vertex(object):
         This list contains vertices this vertex has edges to.
         Accordingly, this vertex can be found in ``edges_to`` of the
         vertices in ``edges_to`` (think: bidirectionally linked).
+
+        Access patterns to this structure are different. Did some quick
+        tests. Lists appeared to perform almost 10% better than sets.
         """
 
         self.hops_cache = dict()
@@ -325,9 +328,10 @@ class GolfGraph(object):
                "can't search hops for a vertex without any edges"
 
         # check if we can serve the request from the cache
-        if vertex_b in vertex_a.hops_cache:
+        hops_cache_entry = vertex_a.hops_cache.get(vertex_b, None)
+        if hops_cache_entry is not None:
             debug("hops cache hit")
-            return vertex_a.hops_cache[vertex_b]
+            return hops_cache_entry
 
         # ``set`` because needs fast lookup:
         ever_enqueued = {vertex_a}
