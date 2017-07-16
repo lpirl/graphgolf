@@ -40,12 +40,23 @@ class Vertex(object):
         Maps target vertices to shortest paths.
         """
 
-    def __hash__(self):
-        """ Called very very often, avoid adding logic. """
-        return self.id
+    __hash__ = object.__hash__
+    """
+    We explicitly re-use ``object``'s ``__hash__`` here, since it is
+    faster than providing an own ``id()``-based implementation.
+    See also:
+    https://docs.python.org/3/reference/datamodel.html#object.__hash__
+
+    Also, if we'd base our hypothetical implementation of ``__hash__``
+    on ``self.id`` (what would make sense), we'd have to do some stunts
+    to make an instance of ``Vertex`` to work with pickle
+    (see `here <https://bugs.python.org/issue1761028>`__).
+    """
 
     def __eq__(self, other):
         """ Called very very often, avoid adding logic. """
+        assert (self.id == other.id) == (id(self) == id(other)), \
+               "we don't expect to have equal but non-identical vertices!?"
         return self.id == other.id
 
     def __lt__(self, other):

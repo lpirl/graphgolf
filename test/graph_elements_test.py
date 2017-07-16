@@ -60,8 +60,9 @@ class GolfGraphTest(BaseTest):
         degree = graph.degree
 
         self.assertTrue(len(vertices) == graph.order)
+        ids = set(v.id for v in graph.vertices)
         for i in range(graph.order):
-          self.assertIn(Vertex(i), vertices)
+          self.assertIn(i, ids)
 
     def test_degree_invariant(self):
         """
@@ -261,3 +262,12 @@ class GolfGraphTest(BaseTest):
         graph.remove_edge_unsafe(graph.vertices[1], graph.vertices[2])
         graph.analyze()
         self.assertFalse(graph.ideal())
+
+    def test_no_duplicate_vertices(self):
+        """
+        Tests whether we can have equal but non-identical vertices.
+        We shouldn't, since - in our specific case - it would suggest
+        duplicate vertices in memory and hence, inefficiency.
+        """
+        with self.assertRaises(AssertionError):
+            Vertex(1) == Vertex(1)
