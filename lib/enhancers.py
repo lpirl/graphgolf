@@ -133,13 +133,19 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
         sample_size = self._get_number_of_edges_to_replace(graph)
 
         sampled_vertices = sample(vertices, sample_size)
-        consider_when_relinking = []
+
+        consider_when_relinking = set()
+        """
+        set is faster (i.e. timeit) for appending and we need to ensure
+        no duplicates anyway
+        """
+
         for vertex_a in sampled_vertices:
             if vertex_a.edges_to:
                 vertex_b = vertex_a.edges_to[0]
                 graph.remove_edge_unsafe(vertex_a, vertex_b)
-                consider_when_relinking.append(vertex_a)
-                consider_when_relinking.append(vertex_b)
+                consider_when_relinking.add(vertex_a)
+                consider_when_relinking.add(vertex_b)
 
         graph.add_as_many_random_edges_as_possible(consider_when_relinking)
 

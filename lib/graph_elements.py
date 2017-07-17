@@ -247,11 +247,17 @@ class GolfGraph(object):
 
         degree = self._degree
 
-        overall_vertices = limit_to_vertices or list(self.vertices)
+        if limit_to_vertices is not None:
+            assert len(limit_to_vertices) == len(set(limit_to_vertices)), \
+                   "please make sure there are no duplicates in " \
+                   "``limit_to_vertices``"
+            overall_vertices = limit_to_vertices
+        else:
+            overall_vertices = list(self.vertices)
         """
-        A list of vertices that we consider in this method.
-        Vertices which were found with no ports left will be removed
-        during the execution of this method.
+        ``overall_vertices``: A list of vertices that we consider in
+        this method. Vertices which were found with no ports left will
+        be removed during the execution of this method.
         """
 
         # repeat ``degree`` times
