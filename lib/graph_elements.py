@@ -11,6 +11,9 @@ from itertools import combinations
 class Vertex(object):
     """
     A vertex in a graph.
+
+    We'll have a lot of those in memory, so store data wisely at the
+    instances.
     """
 
     def __init__(self, id):
@@ -102,7 +105,7 @@ class GolfGraph(object):
         # ``list`` because needs fast iteration
         self.vertices = [Vertex(i) for i in range(order)]
 
-        self.modified_vertices = set()
+        self._modified_vertices = set()
         """
         Herein we collect modified vertices, for which we have to
         invalidate the hops caches later on.
@@ -215,8 +218,8 @@ class GolfGraph(object):
         debug("wiring %s and %s", vertex_a, vertex_b)
         vertex_a.edges_to.append(vertex_b)
         vertex_b.edges_to.append(vertex_a)
-        self.modified_vertices.add(vertex_a)
-        self.modified_vertices.add(vertex_b)
+        self._modified_vertices.add(vertex_a)
+        self._modified_vertices.add(vertex_b)
         assert len(vertex_a.edges_to) <= self.degree
         assert len(vertex_b.edges_to) <= self.degree
 
@@ -232,8 +235,8 @@ class GolfGraph(object):
         assert vertex_a != vertex_b, "vertex should not have edge to itself"
         vertex_a.edges_to.remove(vertex_b)
         vertex_b.edges_to.remove(vertex_a)
-        self.modified_vertices.add(vertex_a)
-        self.modified_vertices.add(vertex_b)
+        self._modified_vertices.add(vertex_a)
+        self._modified_vertices.add(vertex_b)
 
     def add_as_many_random_edges_as_possible(self, limit_to_vertices=None):
         """
@@ -523,7 +526,7 @@ class GolfGraph(object):
         self.aspl = None
         self.diameter = None
 
-        assert len(self.modified_vertices) > 0, "no vertices modified"
+        assert len(self._modified_vertices) > 0, "no vertices modified"
 
         # We look into the hops caches of all vertices. If we find a
         # modified vertex as target or as hop, we drop that cache item.
@@ -541,13 +544,13 @@ class GolfGraph(object):
 
                 # check if the target of that cache entry is a modified
                 # vertex
-                if target in self.modified_vertices:
+                if target in self._modified_vertices:
                     keys_to_invalidate.add(target)
                     break
 
                 # check if a modified vertex is within the hops
                 for hop in hops:
-                    if hop in self.modified_vertices:
+                    if hop in self._modified_vertices:
                         keys_to_invalidate.add(target)
                         break
 
