@@ -9,7 +9,7 @@ from sys import argv
 from os import wait
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
-from multiprocessing import Process, SimpleQueue
+from multiprocessing import Process, Manager
 
 from lib.enhancers import EnhancerRegistry
 from lib.graph_elements import GolfGraph
@@ -126,7 +126,7 @@ class Cli(object):
         """
 
         processes = []
-        report_queue = SimpleQueue()
+        report_queue = Manager().Queue()
 
         while True:
 
@@ -152,6 +152,10 @@ class Cli(object):
                 process = processes.pop()
                 debug("terminating %s", process)
                 process.terminate()
+
+            # in case processes submitted a graph before they got killed
+            while not report_queue.empty():
+                report_queue.get()
 
     def write_edges(self):
         """
