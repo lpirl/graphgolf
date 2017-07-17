@@ -7,6 +7,7 @@ This module contains classes that enhance a graph.
 from abc import ABCMeta
 from random import sample, choice
 from logging import info
+from itertools import combinations
 
 
 
@@ -154,13 +155,6 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
 
 
 @EnhancerRegistry.register
-class RandomlyReplace1PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
-    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
-    PERCENTAGE = 1
-
-
-
-@EnhancerRegistry.register
 class RandomlyReplace5PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
     """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
     PERCENTAGE = 5
@@ -175,6 +169,57 @@ class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhan
 
 
 @EnhancerRegistry.register
-class RandomlyReplace50PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
+class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
     """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
     PERCENTAGE = 50
+
+
+
+@EnhancerRegistry.register
+class ShortcutLongestPath(AbstractBaseEnhancer):
+    """
+    Searches longest path and creates an edge between the source and
+    destination vertex.
+    If the source or the destination vertex have no "ports" left, a
+    random edge will be disconnected.
+    """
+
+    @staticmethod
+    def modify_graph(graph):
+        """ See class' docstring. """
+
+        degree = graph.degree
+
+        hops_count_max = 0
+        """
+        Stores the maximum count of hops found between any two vertices.
+        """
+
+        longest_paths = []
+        """
+        Stores tuples of (source, destination) vertices, for which one has
+        to hop over ``hops_count_max`` vertices (i.e., source and destination
+        of the longest paths).
+        """
+
+        for vertex_a, vertex_b in combinations(graph.vertices, 2):
+            hops = graph.hops(vertex_a, vertex_b)
+            hops_count = len(hops)
+            if hops_count == hops_count_max:
+                longest_paths.append((vertex_a, vertex_b))
+            elif hops_count > hops_count_max:
+                hops_count_max = hops_count
+                longest_paths = [(vertex_a, vertex_b)]
+            # elif hops_count < hops_count_max:
+                # pass
+
+        for source_and_dest in longest_paths:
+
+            # disconnect a random edge if all "ports" in use
+            for vertex in source_and_dest:
+                assert len(vertex.edges_to) <= degree
+                if len(vertex.edges_to) == degree:
+                    graph.remove_edge_unsafe(vertex,
+                                             choice(vertex.edges_to))
+
+            graph.add_edge_unsafe(*source_and_dest)
