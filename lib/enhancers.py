@@ -5,7 +5,7 @@ This module contains classes that enhance a graph.
 """
 
 from abc import ABCMeta
-from random import sample
+from random import sample, choice
 from logging import info
 
 
@@ -122,7 +122,7 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
 
     def modify_graph(self, graph):
         """
-        Chooses PERCENT random vertices removes their "first" edge and
+        Chooses ``PERCENTAGE`` random vertices removes a random edge and
         adds another one.
         """
 
@@ -142,7 +142,7 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
 
         for vertex_a in sampled_vertices:
             if vertex_a.edges_to:
-                vertex_b = vertex_a.edges_to[0]
+                vertex_b = choice(vertex_a.edges_to)
                 graph.remove_edge_unsafe(vertex_a, vertex_b)
                 consider_when_relinking.add(vertex_a)
                 consider_when_relinking.add(vertex_b)
