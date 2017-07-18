@@ -444,7 +444,8 @@ class GolfGraph(object):
 
         for vertex_a, vertex_b in combinations(self.vertices, 2):
             length = self.hops_count(vertex_a, vertex_b)
-            longest_shortest_path = max(longest_shortest_path, length)
+            if longest_shortest_path < length:
+                longest_shortest_path = length
             lengths_sum += length
             lengths_count += 1
 
