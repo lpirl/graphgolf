@@ -153,6 +153,7 @@ class AbstractLongestPathEnhancers(AbstractBaseEnhancer):
             # elif hops_count < hops_count_max:
                 # pass
 
+        assert len(longest_paths) > 0
         return longest_paths
 
 
@@ -248,6 +249,7 @@ class RandomlyReplaceTwoEdgesEnhancer(AbstractRandomlyReplaceEdgesEnhancer):
     NUMBER_OF_EDGES_TO_REPLACE = 2
 
 
+
 class AbstractRandomlyReplacePercentageOfEdgesEnhancer(
         AbstractRandomlyReplaceEdgesEnhancer
 ):
@@ -261,6 +263,7 @@ class AbstractRandomlyReplacePercentageOfEdgesEnhancer(
 
     def _number_of_edges_to_replace(self, graph):
         return int(self.PERCENTAGE * (len(graph.vertices)/100))
+
 
 
 def register_replace_percentage_of_edges_enhancer():
