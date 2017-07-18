@@ -4,6 +4,7 @@ All elements of a graph.
 
 from logging import debug, warning
 from itertools import combinations
+from random import shuffle
 
 
 

@@ -97,21 +97,40 @@ class AbstractBaseEnhancer(object):
         """
         raise NotImplementedError("subclass responsibility")
 
+    @classmethod
+    def remove_random_edge(cls, graph, vertex,
+                           allow_complete_disconnect=True):
+        """
+        Removes a random edge from ``vertex``.
+        If not ``allow_complete_disconnect``, this method will take care
+        of not disconnecting vertices from the graph completely.
+
+        For your concrete enhancer, please test if the different settings
+        for ``allow_complete_disconnect``. I found that allowing to
+        disconnect vertices from the graph completely gave better results
+        (of course, only if you relink them afterwards).
+        """
+        for edge_to in sample(vertex.edges_to, len(vertex.edges_to)):
+            if len(edge_to.edges_to) > 1 or allow_complete_disconnect:
+                graph.remove_edge_unsafe(vertex, edge_to)
+                return
+        else:
+            debug("%s could not find an edge to remove for %s",
+                      cls.__name__, vertex)
 
 
-@EnhancerRegistry.register
-class ModifyLongestPaths(AbstractBaseEnhancer):
+class AbstractLongestPathEnhancers(AbstractBaseEnhancer):
     """
-    #. searches longest paths
-    #. if source or destination vertex have no ports left, unlink a
-       random edge, respectively
-    #. randomly relink source or destination vertex,
-       considering all vertices
+    Provides helpers for finding longest paths etc.
     """
 
     @classmethod
-    def modify_graph(cls, graph):
-        """ See class' docstring. """
+    def longest_paths_sources_destinatons(cls, graph):
+        """
+        Returns tuples of (source, destination) vertices, for which one has
+        to hop over ``hops_count_max`` vertices (i.e., source and destination
+        of the longest paths).
+        """
 
         hops_count_max = 0
         """
@@ -119,11 +138,6 @@ class ModifyLongestPaths(AbstractBaseEnhancer):
         """
 
         longest_paths = []
-        """
-        Stores tuples of (source, destination) vertices, for which one has
-        to hop over ``hops_count_max`` vertices (i.e., source and destination
-        of the longest paths).
-        """
 
         # find longest paths and remember them
         for vertex_a, vertex_b in combinations(graph.vertices, 2):
@@ -137,15 +151,41 @@ class ModifyLongestPaths(AbstractBaseEnhancer):
             # elif hops_count < hops_count_max:
                 # pass
 
+        return longest_paths
+
+
+
+@EnhancerRegistry.register
+class ModifyLongestPaths(AbstractLongestPathEnhancers):
+    """
+    #. searches longest paths
+    #. if source or destination vertex have no ports left, unlink a
+       random edge, respectively
+    #. randomly relink source or destination vertex,
+       considering all vertices
+    """
+
+    @classmethod
+    def modify_graph(cls, graph):
+        """ See class' docstring. """
+
+        consider_for_relinking = set()
+
         # process paths that are of maximum length
-        for source_and_dest in longest_paths:
+        for source_and_dest in cls.longest_paths_sources_destinatons(graph):
 
             # process source and destination vertex of one longest path
             for vertex in source_and_dest:
 
-                graph.ensure_can_add_edge(vertex)
+                # check if the vertex has a port left:
+                assert len(vertex.edges_to) <= graph.degree
+                if len(vertex.edges_to) == graph.degree:
 
-        graph.add_as_many_random_edges_as_possible()
+                    cls.remove_random_edge(graph, vertex)
+
+                consider_for_relinking.add(vertex)
+
+        graph.add_as_many_random_edges_as_possible(consider_for_relinking)
 
         return graph
 
@@ -189,18 +229,7 @@ class AbstractRandomlyReplaceEdgesEnhancer(AbstractBaseEnhancer):
         vertices = graph.vertices
 
         for _ in range(self._number_of_edges_to_replace(graph)):
-            vertex = choice(vertices)
-            edges_to = vertex.edges_to
-            for other_vertex in sample(edges_to, len(edges_to)):
-                if len(other_vertex.edges_to) < 2:
-                    # let's not remove edges that would leave a vertex
-                    # completely detached from the rest of the graph
-                    continue
-                graph.remove_edge_unsafe(vertex, other_vertex)
-                break
-            else:
-                debug("%s could not find an edge to remove for %s",
-                      self, vertex)
+            self.remove_random_edge(graph, choice(vertices))
 
         graph.add_as_many_random_edges_as_possible()
 
