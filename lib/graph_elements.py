@@ -323,7 +323,8 @@ class GolfGraph(object):
                     self.add_edge_unsafe(vertex_a, vertex_b)
                     break
 
-    def hops(self, vertex_a, vertex_b):
+    @staticmethod
+    def hops(vertex_a, vertex_b):
         """
         Returns a minimal number of hops (Breadth-First search) to get
         from ``vertex_a`` to ``vertex_b`` (``vertex_a`` != ``vertex_b``).

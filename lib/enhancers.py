@@ -114,9 +114,9 @@ class AbstractBaseEnhancer(object):
             if len(edge_to.edges_to) > 1 or allow_complete_disconnect:
                 graph.remove_edge_unsafe(vertex, edge_to)
                 return
-        else:
-            debug("%s could not find an edge to remove for %s",
-                      cls.__name__, vertex)
+
+        debug("%s could not find an edge to remove for %s",
+              cls.__name__, vertex)
 
 
 class AbstractLongestPathEnhancers(AbstractBaseEnhancer):
@@ -124,8 +124,10 @@ class AbstractLongestPathEnhancers(AbstractBaseEnhancer):
     Provides helpers for finding longest paths etc.
     """
 
+    __metaclass__ = ABCMeta
+
     @classmethod
-    def longest_paths_sources_destinatons(cls, graph):
+    def longest_paths(cls, graph):
         """
         Returns tuples of (source, destination) vertices, for which one has
         to hop over ``hops_count_max`` vertices (i.e., source and destination
@@ -169,10 +171,8 @@ class ModifyLongestPaths(AbstractLongestPathEnhancers):
     def modify_graph(cls, graph):
         """ See class' docstring. """
 
-        consider_for_relinking = set()
-
         # process paths that are of maximum length
-        for source_and_dest in cls.longest_paths_sources_destinatons(graph):
+        for source_and_dest in cls.longest_paths(graph):
 
             # process source and destination vertex of one longest path
             for vertex in source_and_dest:
@@ -183,9 +183,10 @@ class ModifyLongestPaths(AbstractLongestPathEnhancers):
 
                     cls.remove_random_edge(graph, vertex)
 
-                consider_for_relinking.add(vertex)
-
-        graph.add_as_many_random_edges_as_possible(consider_for_relinking)
+        # not limiting ``add_as_many_random_edges_as_possible`` to the
+        # vertices we modified appeared to give better slower BUT
+        # was observed to make progress more reliably
+        graph.add_as_many_random_edges_as_possible()
 
         return graph
 
@@ -196,6 +197,8 @@ class AbstractRandomlyReplaceEdgesEnhancer(AbstractBaseEnhancer):
     Removes ``NUMBER_OF_EDGES_TO_REPLACE`` percent of edges and adds new
     ones.
     """
+
+    __metaclass__ = ABCMeta
 
     NUMBER_OF_EDGES_TO_REPLACE = None
     """to be set by subclasses"""
