@@ -3,7 +3,6 @@ All elements of a graph.
 """
 
 from logging import debug, warning
-from random import shuffle
 from itertools import combinations
 
 
@@ -558,34 +557,3 @@ class GolfGraph(object):
             # now actually clear items from the vertex' cache
             for key_to_invalidate in keys_to_invalidate:
                 del vertex.hops_cache[key_to_invalidate]
-
-    def ensure_can_add_edge(self, vertex):
-        """
-        Ensure ``vertex`` has an "unused" port (i.e., less than degree
-        edges connected) by removing another random edge, if required.
-
-        Raises an AssertionError if unsuccessful.
-        """
-
-        assert len(vertex.edges_to) <= self.degree
-
-        # if there are unused "ports", do nothing
-        if len(vertex.edges_to) < self.degree:
-            return
-
-        # hmmm we sadly have to copy ``edges_to`` to shuffle it
-        # - probably room for improvement
-        edges_to_shuffled = vertex.edges_to[:]
-        shuffle(edges_to_shuffled)
-
-        # find a vertex to which the edge can be removed
-        for edge_to in edges_to_shuffled:
-
-            # ensure not making the other vertex completely unconnected
-            if len(edge_to.edges_to) > 1:
-
-                # finally, remove the edge
-                self.remove_edge_unsafe(vertex, edge_to)
-                return
-
-        assert False, "could not disconnect an edge"

@@ -5,8 +5,8 @@ This module contains classes that enhance a graph.
 """
 
 from abc import ABCMeta
-from random import sample, choice, shuffle
-from logging import info, warning
+from random import choice, sample
+from logging import debug, info, warning
 from itertools import combinations
 
 
@@ -99,86 +99,14 @@ class AbstractBaseEnhancer(object):
 
 
 
-class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
-    """
-    Removes ``PERCENTAGE`` percent of edges and adds new ones.
-    """
-
-    PERCENTAGE = None
-    """to be set by subclasses"""
-
-    @classmethod
-    def _get_number_of_edges_to_replace(cls, graph):
-        return int(cls.PERCENTAGE * (len(graph.vertices)/100))
-
-    def applicable_to(self, graph):
-        """
-        Returns Boolean, whether this enhancer is applicable to the
-        specified ``graph``.
-        If we disconnect just one vertex, we'll reconnect it to the
-        same other vertex. Pointless. So we require at least 2 vertices
-        to be re-connected per iteration.
-        """
-        return self._get_number_of_edges_to_replace(graph) >= 2
-
-    def modify_graph(self, graph):
-        """
-        Chooses ``PERCENTAGE`` random vertices removes a random edge and
-        adds another one.
-        """
-
-        assert self.applicable_to(graph)
-        assert graph.order > graph.degree-1
-
-        vertices = graph.vertices
-        sample_size = self._get_number_of_edges_to_replace(graph)
-
-        sampled_vertices = sample(vertices, sample_size)
-
-        consider_when_relinking = set()
-        """
-        set is faster (i.e. timeit) for appending and we need to ensure
-        no duplicates anyway
-        """
-
-        for vertex in sampled_vertices:
-            graph.ensure_can_add_edge(vertex)
-            consider_when_relinking.add(vertex)
-
-        graph.add_as_many_random_edges_as_possible(consider_when_relinking)
-
-        return graph
-
-
-
-@EnhancerRegistry.register
-class RandomlyReplace5PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
-    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
-    PERCENTAGE = 5
-
-
-
-@EnhancerRegistry.register
-class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
-    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
-    PERCENTAGE = 10
-
-
-
-@EnhancerRegistry.register
-class RandomlyReplace50PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
-    """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
-    PERCENTAGE = 50
-
-
-
 @EnhancerRegistry.register
 class ModifyLongestPaths(AbstractBaseEnhancer):
     """
     #. searches longest paths
     #. if source or destination vertex have no ports left, unlink a
        random edge, respectively
-    #. randomly relink, considering all vertices
+    #. randomly relink source or destination vertex,
+       considering all vertices
     """
 
     @classmethod
@@ -220,3 +148,103 @@ class ModifyLongestPaths(AbstractBaseEnhancer):
         graph.add_as_many_random_edges_as_possible()
 
         return graph
+
+
+
+class AbstractRandomlyReplaceEdgesEnhancer(AbstractBaseEnhancer):
+    """
+    Removes ``NUMBER_OF_EDGES_TO_REPLACE`` percent of edges and adds new
+    ones.
+    """
+
+    NUMBER_OF_EDGES_TO_REPLACE = None
+    """to be set by subclasses"""
+
+    def applicable_to(self, graph):
+        """
+        Returns Boolean, whether this enhancer is applicable to the
+        specified ``graph``.
+        If we disconnect just one vertex, we'll reconnect it to the
+        same other vertex. Pointless. So we require at least 2 vertices
+        to be re-connected per iteration.
+        """
+        return self._number_of_edges_to_replace(graph) >= 2
+
+    def _number_of_edges_to_replace(self, graph):
+        """
+        Returns the number of edges to replace.
+        Subclasses might want to override this.
+        """
+        return self.NUMBER_OF_EDGES_TO_REPLACE
+
+    def modify_graph(self, graph):
+        """
+        Chooses ``PERCENTAGE`` random vertices removes a random edge and
+        adds another one.
+        """
+
+        assert self.applicable_to(graph)
+        assert graph.order > graph.degree-1
+
+        vertices = graph.vertices
+
+        for _ in range(self._number_of_edges_to_replace(graph)):
+            vertex = choice(vertices)
+            edges_to = vertex.edges_to
+            for other_vertex in sample(edges_to, len(edges_to)):
+                if len(other_vertex.edges_to) < 2:
+                    # let's not remove edges that would leave a vertex
+                    # completely detached from the rest of the graph
+                    continue
+                graph.remove_edge_unsafe(vertex, other_vertex)
+                break
+            else:
+                debug("%s could not find an edge to remove for %s",
+                      self, vertex)
+
+        graph.add_as_many_random_edges_as_possible()
+
+        return graph
+
+
+
+@EnhancerRegistry.register
+class RandomlyReplaceTwoEdgesEnhancer(AbstractRandomlyReplaceEdgesEnhancer):
+    """
+    See ``AbstractRandomlyReplaceEdgesEnhancer``.
+    """
+    NUMBER_OF_EDGES_TO_REPLACE = 2
+
+
+class AbstractRandomlyReplacePercentageOfEdgesEnhancer(
+        AbstractRandomlyReplaceEdgesEnhancer
+):
+    """
+    Like ``AbstractRandomlyReplaceEdgesEnhancer`` but controlled via a
+    percentage of edges to replace.
+    """
+
+    PERCENTAGE = None
+    """to be set by subclasses"""
+
+    def _number_of_edges_to_replace(self, graph):
+        return int(self.PERCENTAGE * (len(graph.vertices)/100))
+
+
+def register_replace_percentage_of_edges_enhancer():
+    """
+    Quick and dirty helper to create "replace percentage enhancers".
+    """
+    percentages = (10, 25)
+    for percentage in percentages:
+
+        class RandomlyReplacePercentageOfEdgesEnhancer(
+                AbstractRandomlyReplacePercentageOfEdgesEnhancer
+        ):
+            PERCENTAGE = percentage
+
+        EnhancerRegistry.register(
+            RandomlyReplacePercentageOfEdgesEnhancer
+        )
+
+register_replace_percentage_of_edges_enhancer()

@@ -184,6 +184,22 @@ class Cli(object):
             if self.args.once:
                 break
 
+    def current_edges_filename(self):
+        """
+        Returns the file name of the current edges file.
+        """
+
+        assert self.best_graph.diameter is not None
+        assert self.best_graph.aspl is not None
+
+        return "-".join((
+            "edges",
+            "order=%i" % self.best_graph.order,
+            "degree=%i" % self.best_graph.degree,
+            "diameter=%i" % self.best_graph.diameter,
+            "aspl=%f" % self.best_graph.aspl
+        ))
+
     def write_edges(self):
         """
         Writes the best graph to a file.
@@ -195,14 +211,7 @@ class Cli(object):
 
         info("writing out best graph found")
 
-        filename = "-".join((
-            "edges",
-            "order=%i" % self.best_graph.order,
-            "degree=%i" % self.best_graph.degree,
-            "diameter=%i" % self.best_graph.diameter,
-            "aspl=%f" % self.best_graph.aspl
-        ))
-        with open(filename, mode="w") as open_file:
+        with open(self.current_edges_filename(), mode="w") as open_file:
             open_file.writelines(("%i %i\n" % (v1.id, v2.id)
                                   for v1, v2 in self.best_graph.edges()))
 
