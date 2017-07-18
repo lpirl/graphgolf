@@ -54,6 +54,9 @@ class Cli(object):
                                      help=("serial "
                                            "execution for debugging (** "
                                            "W/O MAKING ACTUAL PROGRESS**)"))
+        self.arg_parser.add_argument('-o', '--once', action='store_true',
+                                     default=False,
+                                     help="run enhancers only once")
         self.arg_parser.add_argument('order', type=int,
                                      help="order of the graph")
         self.arg_parser.add_argument('degree', type=int,
@@ -164,6 +167,9 @@ class Cli(object):
             while not report_queue.empty():
                 report_queue.get()
 
+            if self.args.once:
+                break
+
     def _run_debug(self):
         """
         Like ``_run`` but w/o forking processes and parallelism.
@@ -174,6 +180,9 @@ class Cli(object):
             for enhancer in self.enhancers:
                 if enhancer.applicable_to(self.best_graph):
                     enhancer.enhance(self.best_graph, report_queue)
+
+            if self.args.once:
+                break
 
     def write_edges(self):
         """
