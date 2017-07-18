@@ -50,6 +50,10 @@ class Cli(object):
         )
         self.arg_parser.add_argument('-e', '--edges', type=str,
                                      help="file name to load edges from")
+        self.arg_parser.add_argument('-s', '--serial', action='store_true',
+                                     default=False, help=("serial "
+                                     "execution for debugging (**W/O "
+                                     "MAKING ACTUAL PROGRESS**)"))
         self.arg_parser.add_argument('order', type=int,
                                      help="order of the graph")
         self.arg_parser.add_argument('degree', type=int,
@@ -114,7 +118,10 @@ class Cli(object):
         print("initial graph:", self.best_graph)
 
         try:
-            self._run()
+            if self.args.serial:
+                self._run_debug()
+            else:
+                self._run()
         except KeyboardInterrupt:
             self.write_edges()
 
@@ -156,6 +163,17 @@ class Cli(object):
             # in case processes submitted a graph before they got killed
             while not report_queue.empty():
                 report_queue.get()
+
+    def _run_debug(self):
+        """
+        Like ``_run`` but w/o forking processes and parallelism.
+        **MAKES NO ACTUAL PROGRESS**
+        """
+        report_queue = Manager().Queue()
+        while True:
+            for enhancer in self.enhancers:
+                if enhancer.applicable_to(self.best_graph):
+                    enhancer.enhance(self.best_graph, report_queue)
 
     def write_edges(self):
         """
