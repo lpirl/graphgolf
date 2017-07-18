@@ -384,8 +384,8 @@ class GolfGraph(object):
         # check if vertex_b was reachable at all
         assert currently_visiting == vertex_b, \
                "%s appears to be unreachable from %s" % (
-                    vertex_b, vertex_a
-                )
+                   vertex_b, vertex_a
+               )
 
         # follow back the breadcrumbs and remember the hops taken
         # (excluding departure and destination)

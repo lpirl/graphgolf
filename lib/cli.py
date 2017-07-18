@@ -6,7 +6,6 @@ program.
 # encoding: UTF-8
 
 from sys import argv
-from os import wait
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
 from multiprocessing import Process, Manager
@@ -51,9 +50,10 @@ class Cli(object):
         self.arg_parser.add_argument('-e', '--edges', type=str,
                                      help="file name to load edges from")
         self.arg_parser.add_argument('-s', '--serial', action='store_true',
-                                     default=False, help=("serial "
-                                     "execution for debugging (**W/O "
-                                     "MAKING ACTUAL PROGRESS**)"))
+                                     default=False,
+                                     help=("serial "
+                                           "execution for debugging (** "
+                                           "W/O MAKING ACTUAL PROGRESS**)"))
         self.arg_parser.add_argument('order', type=int,
                                      help="order of the graph")
         self.arg_parser.add_argument('degree', type=int,

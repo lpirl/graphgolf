@@ -185,8 +185,6 @@ class ModifyLongestPaths(AbstractBaseEnhancer):
     def modify_graph(cls, graph):
         """ See class' docstring. """
 
-        degree = graph.degree
-
         hops_count_max = 0
         """
         Stores the maximum count of hops found between any two vertices.
