@@ -5,8 +5,8 @@ This module contains classes that enhance a graph.
 """
 
 from abc import ABCMeta
-from random import sample, choice
-from logging import info
+from random import sample, choice, shuffle
+from logging import info, warning
 from itertools import combinations
 
 
@@ -76,7 +76,7 @@ class AbstractBaseEnhancer(object):
             current_graph = self.modify_graph(current_graph)
 
             if not current_graph:
-                info("%s did not return a graph", self.__class__.__name__)
+                warning("%s did not return a graph", self.__class__.__name__)
                 return
 
             # analyze
@@ -141,12 +141,9 @@ class RandomlyReplaceAPercentageEdgesEnhancer(AbstractBaseEnhancer):
         no duplicates anyway
         """
 
-        for vertex_a in sampled_vertices:
-            if vertex_a.edges_to:
-                vertex_b = choice(vertex_a.edges_to)
-                graph.remove_edge_unsafe(vertex_a, vertex_b)
-                consider_when_relinking.add(vertex_a)
-                consider_when_relinking.add(vertex_b)
+        for vertex in sampled_vertices:
+            graph.ensure_can_add_edge(vertex)
+            consider_when_relinking.add(vertex)
 
         graph.add_as_many_random_edges_as_possible(consider_when_relinking)
 
@@ -169,23 +166,23 @@ class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhan
 
 
 @EnhancerRegistry.register
-class RandomlyReplace10PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
+class RandomlyReplace50PercentEdgesEnhancer(RandomlyReplaceAPercentageEdgesEnhancer):
     """ See ``RandomlyReplaceAPercentageEdgesEnhancer``. """
     PERCENTAGE = 50
 
 
 
 @EnhancerRegistry.register
-class ShortcutLongestPath(AbstractBaseEnhancer):
+class ModifyLongestPaths(AbstractBaseEnhancer):
     """
-    Searches longest path and creates an edge between the source and
-    destination vertex.
-    If the source or the destination vertex have no "ports" left, a
-    random edge will be disconnected.
+    #. searches longest paths
+    #. if source or destination vertex have no ports left, unlink a
+       random edge, respectively
+    #. randomly relink, considering all vertices
     """
 
-    @staticmethod
-    def modify_graph(graph):
+    @classmethod
+    def modify_graph(cls, graph):
         """ See class' docstring. """
 
         degree = graph.degree
@@ -202,6 +199,7 @@ class ShortcutLongestPath(AbstractBaseEnhancer):
         of the longest paths).
         """
 
+        # find longest paths and remember them
         for vertex_a, vertex_b in combinations(graph.vertices, 2):
             hops = graph.hops(vertex_a, vertex_b)
             hops_count = len(hops)
@@ -213,13 +211,14 @@ class ShortcutLongestPath(AbstractBaseEnhancer):
             # elif hops_count < hops_count_max:
                 # pass
 
+        # process paths that are of maximum length
         for source_and_dest in longest_paths:
 
-            # disconnect a random edge if all "ports" in use
+            # process source and destination vertex of one longest path
             for vertex in source_and_dest:
-                assert len(vertex.edges_to) <= degree
-                if len(vertex.edges_to) == degree:
-                    graph.remove_edge_unsafe(vertex,
-                                             choice(vertex.edges_to))
 
-            graph.add_edge_unsafe(*source_and_dest)
+                graph.ensure_can_add_edge(vertex)
+
+        graph.add_as_many_random_edges_as_possible()
+
+        return graph
