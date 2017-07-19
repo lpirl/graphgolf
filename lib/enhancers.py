@@ -270,7 +270,7 @@ def register_replace_percentage_of_edges_enhancer():
     """
     Quick and dirty helper to create "replace percentage enhancers".
     """
-    percentages = (10, 25)
+    percentages = (10, 20, 50)
     for percentage in percentages:
 
         class RandomlyReplacePercentageOfEdgesEnhancer(

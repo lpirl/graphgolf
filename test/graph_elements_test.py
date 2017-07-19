@@ -1,5 +1,6 @@
 from itertools import permutations
 from copy import deepcopy
+from pickle import loads, dumps
 
 from test import BaseTest
 from lib.graph_elements import GolfGraph, Vertex
@@ -49,6 +50,16 @@ class GolfGraphTest(BaseTest):
             graph.add_edge_unsafe(vertices[vertex_a_i], vertices[vertex_b_i])
 
         return graph
+
+    @staticmethod
+    def some_valid_graphs():
+        orders = (3, 4, 32, 33)
+        degrees = (2, 3, 4, 32, 33)
+        for order in orders:
+            for degree in degrees:
+                graph = GolfGraph(order, degree)
+                graph.add_as_many_random_edges_as_possible()
+                yield graph
 
     def test_vertex_creation(self):
         """
@@ -100,30 +111,26 @@ class GolfGraphTest(BaseTest):
         # some common cases: negative, zero, odd, even, small, big
         orders = (3, 4, 32, 33)
         degrees = (2, 3, 4, 32, 33)
+        for graph in self.some_valid_graphs():
+            vertices_with_unused_ports = set()
+            for vertex in graph.vertices:
+                edges_to = vertex.edges_to
 
-        for order in orders:
-            for degree in degrees:
-                graph = GolfGraph(order, degree)
-                graph.add_as_many_random_edges_as_possible()
-                vertices_with_unused_ports = set()
-                for vertex in graph.vertices:
-                    edges_to = vertex.edges_to
+                # no more edges_to vertices than the degree allows for
+                self.assertTrue(len(edges_to) <= graph.degree)
 
-                    # no more edges_to vertices than the degree allows for
-                    self.assertTrue(len(edges_to) <= degree)
+                # not fewer connections than allowed (if applicable)
+                if len(edges_to) < graph.degree:
+                    vertices_with_unused_ports.add(vertex)
 
-                    # not fewer connections than allowed (if applicable)
-                    if len(edges_to) < degree:
-                        vertices_with_unused_ports.add(vertex)
+                # no self-connections
+                self.assertNotIn(vertex, edges_to)
 
-                    # no self-connections
-                    self.assertNotIn(vertex, edges_to)
+                # no duplicates in edges_to vertices
+                self.assertEqual(len(edges_to), len(set(edges_to)))
 
-                    # no duplicates in edges_to vertices
-                    self.assertEqual(len(edges_to), len(set(edges_to)))
-
-                if (order - 1) == degree:
-                    self.assertTrue(len(vertices_with_unused_ports) < 2)
+            if (graph.order - 1) == graph.degree:
+                self.assertTrue(len(vertices_with_unused_ports) < 2)
 
     def test_hops_two_vertices(self):
         """
@@ -271,3 +278,30 @@ class GolfGraphTest(BaseTest):
         """
         with self.assertRaises(AssertionError):
             Vertex(1) == Vertex(1)
+
+    def test_pickle_and_unpickle(self):
+        """
+        Tests graph pickling.
+        """
+        for graph in self.some_valid_graphs():
+            unpickled = loads(dumps(graph))
+
+            for attr_name in ("order", "degree", "aspl", "diameter"):
+                self.assertEqual(
+                    getattr(graph, attr_name),
+                    getattr(unpickled, attr_name),
+                )
+
+            for edge_a, edge_b in zip(graph.edges(), unpickled.edges()):
+
+                # we cannot compare the vertices directly; would raise
+                # assertions
+                self.assertEqual(
+                    tuple(v.id for v in edge_a),
+                    tuple(v.id for v in edge_b)
+                )
+
+                self.assertEqual(
+                    tuple(v.hops_cache for v in edge_a),
+                    tuple(v.hops_cache for v in edge_b)
+                )
