@@ -140,6 +140,13 @@ class Cli(object):
 
         while True:
 
+            # check termination criteria
+            if (self.best_graph.diameter <=
+                self.best_graph.diameter_lower_bound and
+                self.best_graph.aspl <= self.best_graph.aspl_lower_bound):
+                print("found best graph")
+                exit(0)
+
             # create processes
             for enhancer in self.enhancers:
                 if enhancer.applicable_to(self.best_graph):

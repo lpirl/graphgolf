@@ -193,7 +193,7 @@ class GolfGraph(object):
         Be aware, that for low values of ``order`` and ``degree``, this
         might return ``None``, due to a lack of implementation.
         """
-        if not self._aspl_lower_bound:
+        if self._aspl_lower_bound is None:
             self._calculate_lower_bounds()
         return self._aspl_lower_bound
 
@@ -204,7 +204,7 @@ class GolfGraph(object):
         Be aware, that for low values of ``order`` and ``degree``, this
         might return ``None``, due to a lack of implementation.
         """
-        if not self._diameter_lower_bound:
+        if self._diameter_lower_bound is None:
             self._calculate_lower_bounds()
         return self._diameter_lower_bound
 
