@@ -1,4 +1,5 @@
 from sys import argv
+from os import remove
 
 from test import BaseTest
 from lib.cli import Cli
@@ -31,3 +32,5 @@ class CliTest(BaseTest):
                     getattr(cli.best_graph, attr_name),
                     getattr(self.cli.best_graph, attr_name)
                 )
+
+            remove(filename)
