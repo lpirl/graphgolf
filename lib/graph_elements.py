@@ -339,10 +339,20 @@ class GolfGraph(object):
         because they are skipped when running the interpreter with -O.
         Design your calling code to not call this with invalid input.
 
+        It actually searches the paths always from the lower ID to the
+        higher ID vertex to have more hits in the hops caches.
+        (We could also fill caches for the reverse direction as well but
+        this feels way more complicated)
+
         Called very often, keep efficient.
         """
         debug("searching shortest path between %s and %s", vertex_a,
               vertex_b)
+
+        reverse = vertex_a > vertex_b
+        if reverse:
+            debug("actually searching path reversed")
+            vertex_a, vertex_b = vertex_b, vertex_a
 
         assert vertex_a != vertex_b, \
                "won't search hops between a vertex and itself..."
@@ -405,6 +415,11 @@ class GolfGraph(object):
 
             # move on (i.e., continue to follow the breadcrumbs back)
             currently_visiting = currently_visiting.breadcrumb
+
+        # if we searched reverse, we have to reverse the list of hops we
+        # return
+        if reverse:
+            hops.reverse()
 
         return hops
 
