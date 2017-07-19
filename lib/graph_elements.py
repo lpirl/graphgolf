@@ -569,9 +569,15 @@ class GolfGraph(object):
         This is our custom implementation to pickle a graph.
         ``pickle``'s default implementation exceeds the maximum recursion
         depths very soon for bigger graphs.
+
+        Test show, that this implementation is at least fast as the
+        generic implementation by the ``pickle`` module.
         """
         debug("collecting state of graph instance")
 
+        # We do not want to transform the iterable of modified vertices to
+        # an iterable of IDs. After invalidating the corresponding caches,
+        # this iterable will be empty.
         if self._modified_vertices:
             self._invalidate_caches()
         assert len(self._modified_vertices) == 0
@@ -601,7 +607,7 @@ class GolfGraph(object):
     def __setstate__(self, state):
         """
         This is our custom implementation to unpickle a graph.
-        See also ``__getstate__``.
+        See also ``self.__getstate__()``.
         """
         debug("restoring state of graph instance")
 
