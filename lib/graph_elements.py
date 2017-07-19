@@ -76,6 +76,8 @@ class Vertex(object):
     def __repr__(self):
         return self.__str__()
 
+
+
 class GolfGraph(object):
     """
     A graph specifically crafted for
@@ -524,7 +526,7 @@ class GolfGraph(object):
 
         This is quite expensive. Consider wisely when calling this.
         """
-
+        debug("invalidating hops caches")
         self.aspl = None
         self.diameter = None
 
@@ -559,3 +561,72 @@ class GolfGraph(object):
             # now actually clear items from the vertex' cache
             for key_to_invalidate in keys_to_invalidate:
                 del vertex.hops_cache[key_to_invalidate]
+
+        self._modified_vertices.clear()
+
+    def __getstate__(self):
+        """
+        This is our custom implementation to pickle a graph.
+        ``pickle``'s default implementation exceeds the maximum recursion
+        depths very soon for bigger graphs.
+        """
+        debug("collecting state of graph instance")
+
+        if self._modified_vertices:
+            self._invalidate_caches()
+        assert len(self._modified_vertices) == 0
+
+        debug("collecting all attributes but vertices")
+        state = {k: v
+                 for k, v in self.__dict__.items()
+                 if k != "vertices"}
+
+        debug("collecting edge IDs")
+        state["edges"] = tuple((a.id, b.id) for a, b in self.edges())
+
+        debug("collecting hops caches of vertices")
+        # brutal violation of Demeter's law
+        #   a list of hops caches, one per vertex, in order
+        #   the caches itself are only ID-based
+        state["hops_caches"] = tuple(
+            # map a destination to IDs of the "hop vertices"
+            # (like ``Vertex``'s  ``hops_cache`` but with IDs).
+            {dest.id: tuple(hop.id for hop in hops)
+             for dest, hops in vertex.hops_cache.items()}
+            for vertex in self.vertices
+        )
+
+        return state
+
+    def __setstate__(self, state):
+        """
+        This is our custom implementation to unpickle a graph.
+        See also ``__getstate__``.
+        """
+        debug("restoring state of graph instance")
+
+        debug("restoring basic attributes")
+        self._order = state.pop("_order")
+        self._degree = state.pop("_degree")
+        self._modified_vertices = set()
+
+        debug("restoring vertices")
+        self.vertices = [Vertex(i) for i in range(self.order)]
+        vertices = self.vertices
+
+        debug("restoring edges")
+        for src_id, dest_id in state.pop("edges"):
+            self.add_edge_unsafe(vertices[src_id], vertices[dest_id])
+
+        debug("restoring hops caches")
+        hops_caches = state.pop("hops_caches")
+        assert len(vertices) == len(hops_caches)
+        for vertex, hops_cache in zip(vertices, hops_caches):
+            vertex.hops_cache = {
+                vertices[dest_id]: [vertices[hop_id] for hop_id in hop_ids]
+                for dest_id, hop_ids in hops_cache.items()
+            }
+
+        debug("restoring remaining attributes")
+        for key, value in state.items():
+            setattr(self, key, value)
