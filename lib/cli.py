@@ -215,14 +215,15 @@ class Cli(object):
             open_file.writelines(("%i %i\n" % (v1.id, v2.id)
                                   for v1, v2 in self.best_graph.edges()))
 
-    def load_edges(self):
+    def load_edges(self, override_filename=None):
         """
         Loads edges form the file specified in ``self.args`` into
         ``self.best_graph``.
 
         #refactoring: maybe this should be moved to another/separate class?
         """
-        with open(self.args.edges, "r") as open_file:
+        filename = override_filename or self.args.edges
+        with open(filename, "r") as open_file:
             for line in open_file.readlines():
                 line = line.strip()
                 vertex_a_id, vertex_b_id = line.split(" ")
