@@ -336,6 +336,38 @@ class ModifyLongestPaths(AbstractLongestPathEnhancers):
 
 
 
+@EnhancerRegistry.register
+class ShortcuteLongestPaths(AbstractLongestPathEnhancers):
+    """
+    #. searches longest paths
+    #. if source or destination vertex have no ports left, unlink a
+       random edge, respectively
+    #. add edge between source and destination
+    """
+
+    @classmethod
+    def modify_graph(cls, graph):
+        """ See class' docstring. """
+
+        # process paths that are of maximum length
+        for source_and_dest in cls.longest_paths(graph):
+
+            # process source and destination vertex of one longest path
+            for vertex in source_and_dest:
+
+                # check if the vertex has a port left:
+                assert len(vertex.edges_to) <= graph.degree
+                if len(vertex.edges_to) == graph.degree:
+
+                    cls.remove_random_edge(graph, vertex)
+
+
+            graph.add_edge_unsafe(*source_and_dest)
+
+        return graph
+
+
+
 class RandomlyReplaceTwoEdgesEnhancer(AbstractRandomlyReplaceEdgesEnhancer):
     """
     See ``AbstractRandomlyReplaceEdgesEnhancer``.
