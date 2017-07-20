@@ -5,6 +5,7 @@ All elements of a graph.
 from logging import debug, warning
 from itertools import combinations
 from random import shuffle
+from collections import deque
 
 
 class GraphPartitionedError(Exception):
@@ -370,7 +371,7 @@ class GolfGraph(object):
 
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
-        currently_enqueued = [vertex_a]
+        currently_enqueued = deque((vertex_a,))
 
         # out special hacky semantic to mark the start vertex
         # (saves a comparison in the inner-most loop)
@@ -380,7 +381,7 @@ class GolfGraph(object):
         # until the desired vertex is found
         currently_visiting = None
         while currently_enqueued:
-            currently_visiting = currently_enqueued.pop(0)
+            currently_visiting = currently_enqueued.popleft()
 
             # check if we arrived at the target vertex
             if currently_visiting == vertex_b:
