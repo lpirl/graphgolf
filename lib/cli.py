@@ -119,7 +119,7 @@ class Cli(object):
 
         self.best_graph.analyze()
         print("initial graph:", self.best_graph)
-
+        exit(0)
         try:
             if self.args.serial:
                 self._run_debug()

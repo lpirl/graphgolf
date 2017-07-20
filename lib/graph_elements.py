@@ -364,10 +364,15 @@ class GolfGraph(object):
             vertex_a, vertex_b = vertex_b, vertex_a
 
         # check if we can serve the request from the cache
-        hops_cache_entry = vertex_a.hops_cache.get(vertex_b, None)
-        if hops_cache_entry is not None:
-            debug("hops cache hit")
-            return hops_cache_entry
+        forward_cache_entry = vertex_a.hops_cache.get(vertex_b, None)
+        if forward_cache_entry is not None:
+            debug("hops cache hit (forward)")
+            return forward_cache_entry
+        reverse_cache_entry = vertex_b.hops_cache.get(vertex_a, None)
+        if reverse_cache_entry is not None:
+            reverse_cache_entry = reverse_cache_entry.copy()
+            reverse_cache_entry.reverse()
+            return reverse_cache_entry
 
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
