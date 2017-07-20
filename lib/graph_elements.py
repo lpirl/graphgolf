@@ -370,9 +370,8 @@ class GolfGraph(object):
             return forward_cache_entry
         reverse_cache_entry = vertex_b.hops_cache.get(vertex_a, None)
         if reverse_cache_entry is not None:
-            reverse_cache_entry = reverse_cache_entry.copy()
-            reverse_cache_entry.reverse()
-            return reverse_cache_entry
+            debug("hops cache hit (reverse)")
+            return list(reversed(reverse_cache_entry))
 
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
@@ -472,7 +471,8 @@ class GolfGraph(object):
 
         assert bool(self.vertices), "cannot analyze graph w/o vertices"
 
-        self._invalidate_caches()
+        if self._dirty:
+            self._invalidate_caches()
 
         longest_shortest_path = -1
         lengths_sum = 0
