@@ -45,6 +45,7 @@ class Vertex(object):
         """
         A cache for found paths. Stores only intermediate hops.
         Maps target vertices to shortest paths.
+        Tests show, that using tuples in the cache is a tiny bit faster.
         """
 
         self.dirty = False
@@ -116,6 +117,7 @@ class GolfGraph(object):
         self.aspl = None
 
         # ``list`` because needs fast iteration
+        # tests showed, that using tuples here is a tiny bit slower
         self.vertices = [Vertex(i) for i in range(order)]
 
         # if edges modified and vertices' hops caches need to be updated
@@ -414,7 +416,7 @@ class GolfGraph(object):
 
             # fill the hops cache:
             if vertex_b not in currently_visiting.hops_cache:
-                currently_visiting.hops_cache[vertex_b] = hops.copy()
+                currently_visiting.hops_cache[vertex_b] = tuple(hops)
 
             # remember this vertex as hop
             hops.insert(0, currently_visiting)
@@ -652,7 +654,7 @@ class GolfGraph(object):
         self._degree = state.pop("_degree")
 
         debug("restoring vertices")
-        self.vertices = [Vertex(i) for i in range(self.order)]
+        self.vertices = tuple(Vertex(i) for i in range(self.order))
         vertices = self.vertices
 
         debug("restoring edges")
