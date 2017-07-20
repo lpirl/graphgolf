@@ -150,11 +150,14 @@ class Cli(object):
 
             # create processes
             for enhancer in self.enhancers:
-                if enhancer.applicable_to(self.best_graph):
-                    processes.append(
-                        Process(target=enhancer.enhance,
-                                args=(self.best_graph, report_queue))
-                    )
+                if not enhancer.applicable_to(self.best_graph):
+                    debug("%s not applicable to %s", enhancer,
+                          self.best_graph)
+                    continue
+                processes.append(
+                    Process(target=enhancer.enhance,
+                            args=(self.best_graph, report_queue))
+                )
 
             # start processes
             for process in processes:
