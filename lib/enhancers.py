@@ -183,7 +183,7 @@ class AbstractRandomlyReplaceEdgesEnhancer(AbstractBaseEnhancer):
         same other vertex. Pointless. So we require at least 2 vertices
         to be re-connected per iteration.
         """
-        return self._number_of_edges_to_replace(graph) >= 2
+        return self._number_of_edges_to_replace(graph) > 0
 
     def _number_of_edges_to_replace(self, graph):
         """
@@ -254,7 +254,7 @@ class AbstractUnlinkNumberOfVerticesEnhancer(AbstractBaseEnhancer):
         Returns Boolean, whether this enhancer is applicable to the
         specified ``graph``.
         """
-        return self._number_of_vertices_to_replace(graph) >= 1
+        return self._number_of_vertices_to_replace(graph) > 0
 
     def modify_graph(self, graph):
         """
@@ -368,6 +368,17 @@ class ShortcutLongestPaths(AbstractLongestPathEnhancers):
             graph.add_as_many_random_edges_as_possible(source_and_dest)
 
         return graph
+
+
+
+class RandomlyReplaceOneEdgeEnhancer(AbstractRandomlyReplaceEdgesEnhancer):
+    """
+    See ``AbstractRandomlyReplaceEdgesEnhancer``.
+    """
+    NUMBER_OF_EDGES_TO_REPLACE = 1
+
+for _ in range(1):
+    EnhancerRegistry.register(RandomlyReplaceOneEdgeEnhancer)
 
 
 
