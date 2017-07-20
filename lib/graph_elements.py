@@ -431,12 +431,11 @@ class GolfGraph(object):
         if reverse:
             hops.reverse()
 
-        # vacuum old breadcrumbs
+        # vacuum breadcrumbs
         #   note: we could also re-walk the vertices we touched (by
         #   looking at the breadcrumbs) and reset the breadcrumbs only
-        #   for those vertices. However, (for a graph of order 300 and
-        #   degree 10), blindly resetting the breadcrumbs of all vertices
-        #   took only half the time
+        #   for those vertices. However, blindly resetting the breadcrumbs
+        #   of all vertices proved to be significantly faster. Really.
         for vertex in self.vertices:
             vertex.breadcrumb = None
 
