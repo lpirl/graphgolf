@@ -368,11 +368,6 @@ class GolfGraph(object):
             debug("hops cache hit")
             return hops_cache_entry
 
-        # vacuum old breadcrumbs
-        # TODO: make this smarter after the search (re-traverse)
-        for vertex in self.vertices:
-            vertex.breadcrumb = None
-
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
         currently_enqueued = [vertex_a]
@@ -427,6 +422,15 @@ class GolfGraph(object):
         # return
         if reverse:
             hops.reverse()
+
+        # vacuum old breadcrumbs
+        #   note: we could also re-walk the vertices we touched (by
+        #   looking at the breadcrumbs) and reset the breadcrumbs only
+        #   for those vertices. However, (for a graph of order 300 and
+        #   degree 10), blindly resetting the breadcrumbs of all vertices
+        #   took only half the time
+        for vertex in self.vertices:
+            vertex.breadcrumb = None
 
         return hops
 
