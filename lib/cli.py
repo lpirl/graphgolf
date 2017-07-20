@@ -126,7 +126,8 @@ class Cli(object):
             else:
                 self._run()
         except KeyboardInterrupt:
-            self.write_edges()
+            pass
+        self.write_edges()
 
     def _run(self):
         """
