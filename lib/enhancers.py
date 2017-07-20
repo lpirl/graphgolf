@@ -341,7 +341,7 @@ class ModifyLongestPaths(AbstractLongestPathEnhancers):
 
 
 @EnhancerRegistry.register
-class ShortcuteLongestPaths(AbstractLongestPathEnhancers):
+class ShortcutLongestPaths(AbstractLongestPathEnhancers):
     """
     #. searches longest paths
     #. if source or destination vertex have no ports left, unlink a
