@@ -9,6 +9,7 @@ from random import choice, sample
 from logging import debug, info, warning
 from itertools import combinations
 
+from lib.graph_elements import GraphPartitionedError
 
 
 class EnhancerRegistry(object):
@@ -80,7 +81,10 @@ class AbstractBaseEnhancer(object):
                 return
 
             # analyze
-            current_graph.analyze()
+            try:
+                current_graph.analyze()
+            except GraphPartitionedError:
+                continue
             diameter_diff = current_graph.diameter - best_graph.diameter
             aspl_diff = (current_graph.aspl -
                          best_graph.aspl)
@@ -361,8 +365,7 @@ class ShortcuteLongestPaths(AbstractLongestPathEnhancers):
 
                     cls.remove_random_edge(graph, vertex)
 
-
-            graph.add_edge_unsafe(*source_and_dest)
+            graph.add_as_many_random_edges_as_possible(source_and_dest)
 
         return graph
 

@@ -7,6 +7,9 @@ from itertools import combinations
 from random import shuffle
 
 
+class GraphPartitionedError(Exception):
+    pass
+
 
 class Vertex(object):
     """
@@ -256,7 +259,7 @@ class GolfGraph(object):
             assert len(limit_to_vertices) == len(set(limit_to_vertices)), \
                    "please make sure there are no duplicates in " \
                    "``limit_to_vertices``"
-            overall_vertices = limit_to_vertices
+            overall_vertices = list(limit_to_vertices)
         else:
             overall_vertices = list(self.vertices)
         """
@@ -349,16 +352,14 @@ class GolfGraph(object):
         debug("searching shortest path between %s and %s", vertex_a,
               vertex_b)
 
+        assert vertex_a != vertex_b, \
+               "won't search hops between a vertex and itself..."
+
+        # we search paths always in one direction (smaller to bigger ID)
         reverse = vertex_a > vertex_b
         if reverse:
             debug("actually searching path reversed")
             vertex_a, vertex_b = vertex_b, vertex_a
-
-        assert vertex_a != vertex_b, \
-               "won't search hops between a vertex and itself..."
-
-        assert len(vertex_a.edges_to) > 0, \
-               "can't search hops for a vertex without any edges"
 
         # check if we can serve the request from the cache
         hops_cache_entry = vertex_a.hops_cache.get(vertex_b, None)
@@ -395,10 +396,8 @@ class GolfGraph(object):
                     continue
 
         # check if vertex_b was reachable at all
-        assert currently_visiting == vertex_b, \
-               "%s appears to be unreachable from %s" % (
-                   vertex_b, vertex_a
-               )
+        if currently_visiting != vertex_b:
+            raise GraphPartitionedError()
 
         # follow back the breadcrumbs and remember the hops taken
         # (excluding departure and destination)
