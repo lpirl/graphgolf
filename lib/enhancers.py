@@ -16,7 +16,7 @@ class EnhancerRegistry(object):
     Enhancers register at this class.
     """
 
-    enhancers = set()
+    enhancers = list()
 
     def __init__(self):
         """
@@ -29,7 +29,7 @@ class EnhancerRegistry(object):
         """
         To be used as decorator for classes to register them.
         """
-        return cls.enhancers.add(enhancer_cls)
+        return cls.enhancers.append(enhancer_cls)
 
 
 
@@ -119,6 +119,7 @@ class AbstractBaseEnhancer(object):
               cls.__name__, vertex)
 
 
+
 class AbstractLongestPathEnhancers(AbstractBaseEnhancer):
     """
     Provides helpers for finding longest paths etc.
@@ -150,6 +151,7 @@ class AbstractLongestPathEnhancers(AbstractBaseEnhancer):
             elif hops_count > hops_count_max:
                 hops_count_max = hops_count
                 longest_paths = [(vertex_a, vertex_b)]
+            # we don't need to handle the third case:
             # elif hops_count < hops_count_max:
                 # pass
 
@@ -157,6 +159,147 @@ class AbstractLongestPathEnhancers(AbstractBaseEnhancer):
         return longest_paths
 
 
+
+class AbstractRandomlyReplaceEdgesEnhancer(AbstractBaseEnhancer):
+    """
+    Removes ``NUMBER_OF_EDGES_TO_REPLACE`` percent of edges and adds new
+    ones.
+    """
+
+    __metaclass__ = ABCMeta
+
+    NUMBER_OF_EDGES_TO_REPLACE = None
+    """to be set by subclasses"""
+
+    def applicable_to(self, graph):
+        """
+        Returns Boolean, whether this enhancer is applicable to the
+        specified ``graph``.
+        If we disconnect just one vertex, we'll reconnect it to the
+        same other vertex. Pointless. So we require at least 2 vertices
+        to be re-connected per iteration.
+        """
+        return self._number_of_edges_to_replace(graph) >= 2
+
+    def _number_of_edges_to_replace(self, graph):
+        """
+        Returns the number of edges to replace.
+        Subclasses might want to override this.
+        """
+        return self.NUMBER_OF_EDGES_TO_REPLACE
+
+    def modify_graph(self, graph):
+        """
+        See class' docstring.
+        """
+
+        assert self.applicable_to(graph)
+        assert graph.order > graph.degree-1
+
+        debug("%s unlinks %s random edges",
+              self.__class__.__name__,
+              self._number_of_edges_to_replace(graph))
+
+        for vertex in sample(graph.vertices,
+                             self._number_of_edges_to_replace(graph)):
+            self.remove_random_edge(graph, vertex)
+
+        graph.add_as_many_random_edges_as_possible()
+
+        return graph
+
+
+
+class AbstractRandomlyReplacePercentageOfEdgesEnhancer(
+        AbstractRandomlyReplaceEdgesEnhancer
+):
+    """
+    Like ``AbstractRandomlyReplaceEdgesEnhancer`` but controlled via a
+    percentage of edges to replace.
+    """
+
+    PERCENTAGE = None
+    """to be set by subclasses"""
+
+    def _number_of_edges_to_replace(self, graph):
+        edges_approx = graph.order * min(graph.order, graph.degree)
+        return int(self.PERCENTAGE * edges_approx / 100)
+
+
+
+class AbstractUnlinkNumberOfVerticesEnhancer(AbstractBaseEnhancer):
+    """
+    Randomly selects ``NUMBER_OF_VERTICES_TO_REPLACE`` vertices, unlinks
+    them completely and randomly relinks the graph.
+    """
+
+    __metaclass__ = ABCMeta
+
+    NUMBER_OF_VERTICES_TO_REPLACE = None
+    """to be set by subclasses"""
+
+    def _number_of_vertices_to_replace(self, graph):
+        """
+        Returns the number of vertices to unlink.
+        Subclasses might want to override this.
+        """
+        return self.NUMBER_OF_VERTICES_TO_REPLACE
+
+    def applicable_to(self, graph):
+        """
+        Returns Boolean, whether this enhancer is applicable to the
+        specified ``graph``.
+        """
+        return self._number_of_vertices_to_replace(graph) >= 1
+
+    def modify_graph(self, graph):
+        """
+        See class' docstring.
+        """
+
+        assert graph.order > graph.degree-1
+
+        debug("%s unlinks %s random vertices",
+              self.__class__.__name__,
+              self._number_of_vertices_to_replace(graph))
+
+        for vertex in sample(graph.vertices,
+                             self._number_of_vertices_to_replace(graph)):
+            for edge_to in vertex.edges_to:
+                graph.remove_edge_unsafe(vertex, edge_to)
+
+        graph.add_as_many_random_edges_as_possible()
+
+        return graph
+
+
+
+class AbstractUnlinkPercentageOfVerticesEnhancer(
+    AbstractUnlinkNumberOfVerticesEnhancer
+):
+    """
+    Randomly selects ``PERCENTAGE`` vertices, unlinks them
+    completely and randomly relinks the graph.
+    """
+
+    __metaclass__ = ABCMeta
+
+    PERCENTAGE = None
+    """to be set by subclasses"""
+
+    def _number_of_vertices_to_replace(self, graph):
+        """
+        Returns the number of vertices to unlink.
+        Subclasses might want to override this.
+        """
+        return int(self.PERCENTAGE * graph.order/100)
+
+
+
+########################################################################
+#
+# concrete classes
+#
 
 @EnhancerRegistry.register
 class ModifyLongestPaths(AbstractLongestPathEnhancers):
@@ -193,93 +336,42 @@ class ModifyLongestPaths(AbstractLongestPathEnhancers):
 
 
 
-class AbstractRandomlyReplaceEdgesEnhancer(AbstractBaseEnhancer):
-    """
-    Removes ``NUMBER_OF_EDGES_TO_REPLACE`` percent of edges and adds new
-    ones.
-    """
-
-    __metaclass__ = ABCMeta
-
-    NUMBER_OF_EDGES_TO_REPLACE = None
-    """to be set by subclasses"""
-
-    def applicable_to(self, graph):
-        """
-        Returns Boolean, whether this enhancer is applicable to the
-        specified ``graph``.
-        If we disconnect just one vertex, we'll reconnect it to the
-        same other vertex. Pointless. So we require at least 2 vertices
-        to be re-connected per iteration.
-        """
-        return self._number_of_edges_to_replace(graph) >= 2
-
-    def _number_of_edges_to_replace(self, graph):
-        """
-        Returns the number of edges to replace.
-        Subclasses might want to override this.
-        """
-        return self.NUMBER_OF_EDGES_TO_REPLACE
-
-    def modify_graph(self, graph):
-        """
-        Chooses ``PERCENTAGE`` random vertices removes a random edge and
-        adds another one.
-        """
-
-        assert self.applicable_to(graph)
-        assert graph.order > graph.degree-1
-
-        vertices = graph.vertices
-
-        for _ in range(self._number_of_edges_to_replace(graph)):
-            self.remove_random_edge(graph, choice(vertices))
-
-        graph.add_as_many_random_edges_as_possible()
-
-        return graph
-
-
-
-@EnhancerRegistry.register
 class RandomlyReplaceTwoEdgesEnhancer(AbstractRandomlyReplaceEdgesEnhancer):
     """
     See ``AbstractRandomlyReplaceEdgesEnhancer``.
     """
     NUMBER_OF_EDGES_TO_REPLACE = 2
 
+for _ in range(1):
+    EnhancerRegistry.register(RandomlyReplaceTwoEdgesEnhancer)
 
 
-class AbstractRandomlyReplacePercentageOfEdgesEnhancer(
-        AbstractRandomlyReplaceEdgesEnhancer
+
+class  RandomlyReplaceTenPercentEdgesEnhancer(
+    AbstractRandomlyReplacePercentageOfEdgesEnhancer
 ):
-    """
-    Like ``AbstractRandomlyReplaceEdgesEnhancer`` but controlled via a
-    percentage of edges to replace.
-    """
+    """ See super class' docstring. """
+    PERCENTAGE = 10
 
-    PERCENTAGE = None
-    """to be set by subclasses"""
-
-    def _number_of_edges_to_replace(self, graph):
-        return int(self.PERCENTAGE * (len(graph.vertices)/100))
+for _ in range(1):
+    EnhancerRegistry.register(RandomlyReplaceTenPercentEdgesEnhancer)
 
 
 
-def register_replace_percentage_of_edges_enhancer():
-    """
-    Quick and dirty helper to create "replace percentage enhancers".
-    """
-    percentages = (10, 20, 50)
-    for percentage in percentages:
+class UnlinkOneVerexEnhancer(AbstractUnlinkNumberOfVerticesEnhancer):
+    """ See super class' docstring. """
+    NUMBER_OF_VERTICES_TO_REPLACE = 1
 
-        class RandomlyReplacePercentageOfEdgesEnhancer(
-                AbstractRandomlyReplacePercentageOfEdgesEnhancer
-        ):
-            PERCENTAGE = percentage
+for _ in range(1):
+    EnhancerRegistry.register(UnlinkOneVerexEnhancer)
 
-        EnhancerRegistry.register(
-            RandomlyReplacePercentageOfEdgesEnhancer
-        )
 
-register_replace_percentage_of_edges_enhancer()
+
+class UnlinkTenPercentageOfVerticesEnhancer(
+    AbstractUnlinkPercentageOfVerticesEnhancer
+):
+    """ See super class' docstring. """
+    PERCENTAGE = 10
+
+for _ in range(1):
+    EnhancerRegistry.register(UnlinkTenPercentageOfVerticesEnhancer)
