@@ -330,8 +330,7 @@ class GolfGraph(object):
                     self.add_edge_unsafe(vertex_a, vertex_b)
                     break
 
-    @staticmethod
-    def hops(vertex_a, vertex_b):
+    def hops(self, vertex_a, vertex_b):
         """
         Returns a minimal number of hops (Breadth-First search) to get
         from ``vertex_a`` to ``vertex_b`` (``vertex_a`` != ``vertex_b``).
@@ -369,16 +368,18 @@ class GolfGraph(object):
             debug("hops cache hit")
             return hops_cache_entry
 
-        # ``set`` because needs fast lookup:
-        ever_enqueued = {vertex_a}
+        # vacuum old breadcrumbs
+        # TODO: make this smarter after the search (re-traverse)
+        for vertex in self.vertices:
+            vertex.breadcrumb = None
 
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
         currently_enqueued = [vertex_a]
 
-        # unset breadcrumb at departure vertex (it might be not ``None``
-        # from previous searches)
-        vertex_a.breadcrumb = None
+        # out special hacky semantic to mark the start vertex
+        # (saves a comparison in the inner-most loop)
+        vertex_a.breadcrumb = vertex_a
 
         # non-recursive breadth-first walk the graph and lay breadcrumbs
         # until the desired vertex is found
@@ -391,21 +392,23 @@ class GolfGraph(object):
                 break
 
             for edge_to in currently_visiting.edges_to:
-                if edge_to not in ever_enqueued:
+                if edge_to.breadcrumb is None:
+                    assert edge_to != vertex_a, \
+                           "should never come across start node"
                     edge_to.breadcrumb = currently_visiting
-                    ever_enqueued.add(edge_to)
                     currently_enqueued.append(edge_to)
-                    continue
-
-        # check if vertex_b was reachable at all
-        if currently_visiting != vertex_b:
+        else:
             raise GraphPartitionedError()
 
         # follow back the breadcrumbs and remember the hops taken
         # (excluding departure and destination)
         hops = []
+
+        # skip the target vertex (should not appear in returned hops list)
         currently_visiting = currently_visiting.breadcrumb
-        while currently_visiting.breadcrumb is not None:
+
+        # loop until we arrive at the start vertex (and skip it as well)
+        while currently_visiting != vertex_a:
 
             # fill the hops cache:
             if vertex_b not in currently_visiting.hops_cache:
@@ -416,6 +419,9 @@ class GolfGraph(object):
 
             # move on (i.e., continue to follow the breadcrumbs back)
             currently_visiting = currently_visiting.breadcrumb
+
+        assert vertex_a not in hops and vertex_b not in hops, \
+               "neither start nor destination node should be returned"
 
         # if we searched reverse, we have to reverse the list of hops we
         # return
