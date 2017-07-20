@@ -46,6 +46,13 @@ class Vertex(object):
         Maps target vertices to shortest paths.
         """
 
+        self.dirty = False
+        """
+        If our ``edges_to`` have been modified but the ``hops_cache``s
+        of the other vertices have not been invalidated/updated, this is
+        ``True``. Used to defer cache invalidation.
+        """
+
     __hash__ = object.__hash__
     """
     We explicitly re-use ``object``'s ``__hash__`` here, since it is
@@ -110,15 +117,8 @@ class GolfGraph(object):
         # ``list`` because needs fast iteration
         self.vertices = [Vertex(i) for i in range(order)]
 
-        self._modified_vertices = set()
-        """
-        Herein we collect modified vertices, for which we have to
-        invalidate the hops caches later on.
-        That way, we can invalidate the caches all at once instead of
-        upon every modification of edges.
-        We use set, since adding elements is faster and we do not care
-        about the order.
-        """
+        # if edges modified and vertices' hops caches need to be updated
+        self._dirty = False
 
     def __str__(self):
         bits = [
@@ -223,8 +223,9 @@ class GolfGraph(object):
         debug("wiring %s and %s", vertex_a, vertex_b)
         vertex_a.edges_to.append(vertex_b)
         vertex_b.edges_to.append(vertex_a)
-        self._modified_vertices.add(vertex_a)
-        self._modified_vertices.add(vertex_b)
+        self._dirty = True
+        vertex_a.dirty = True
+        vertex_b.dirty = True
         assert len(vertex_a.edges_to) <= self.degree
         assert len(vertex_b.edges_to) <= self.degree
 
@@ -240,8 +241,9 @@ class GolfGraph(object):
         assert vertex_a != vertex_b, "vertex should not have edge to itself"
         vertex_a.edges_to.remove(vertex_b)
         vertex_b.edges_to.remove(vertex_a)
-        self._modified_vertices.add(vertex_a)
-        self._modified_vertices.add(vertex_b)
+        vertex_a.dirty = True
+        vertex_b.dirty = True
+        self._dirty = True
 
     def add_as_many_random_edges_as_possible(self, limit_to_vertices=None):
         """
@@ -540,11 +542,11 @@ class GolfGraph(object):
 
         This is quite expensive. Consider wisely when calling this.
         """
+        assert self._dirty, "no vertices modified"
+
         debug("invalidating hops caches")
         self.aspl = None
         self.diameter = None
-
-        assert len(self._modified_vertices) > 0, "no vertices modified"
 
         # We look into the hops caches of all vertices. If we find a
         # modified vertex as target or as hop, we drop that cache item.
@@ -562,13 +564,13 @@ class GolfGraph(object):
 
                 # check if the target of that cache entry is a modified
                 # vertex
-                if target in self._modified_vertices:
+                if target.dirty:
                     keys_to_invalidate.add(target)
                     break
 
                 # check if a modified vertex is within the hops
                 for hop in hops:
-                    if hop in self._modified_vertices:
+                    if hop.dirty:
                         keys_to_invalidate.add(target)
                         break
 
@@ -576,7 +578,10 @@ class GolfGraph(object):
             for key_to_invalidate in keys_to_invalidate:
                 del vertex.hops_cache[key_to_invalidate]
 
-        self._modified_vertices.clear()
+        # reset dirty flags
+        for vertex in self.vertices:
+            vertex.dirty = False
+        self._dirty = False
 
     def __getstate__(self):
         """
@@ -592,9 +597,9 @@ class GolfGraph(object):
         # We do not want to transform the iterable of modified vertices to
         # an iterable of IDs. After invalidating the corresponding caches,
         # this iterable will be empty.
-        if self._modified_vertices:
+        if self._dirty:
             self._invalidate_caches()
-        assert len(self._modified_vertices) == 0
+        assert not self._dirty
 
         debug("collecting all attributes but vertices")
         state = {k: v
@@ -628,7 +633,6 @@ class GolfGraph(object):
         debug("restoring basic attributes")
         self._order = state.pop("_order")
         self._degree = state.pop("_degree")
-        self._modified_vertices = set()
 
         debug("restoring vertices")
         self.vertices = [Vertex(i) for i in range(self.order)]
