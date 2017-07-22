@@ -356,8 +356,14 @@ class GolfGraph(object):
         debug("searching shortest path between %s and %s", vertex_a,
               vertex_b)
 
+        if self._dirty:
+            self.clean()
+
         assert vertex_a != vertex_b, \
                "won't search hops between a vertex and itself..."
+
+        assert vertex_a.dirty is False, "cannot search hops: vertex A dirty"
+        assert vertex_b.dirty is False, "cannot search hops: vertex B dirty"
 
         # we search paths always in one direction (smaller to bigger ID)
         reverse = vertex_a > vertex_b
@@ -365,7 +371,7 @@ class GolfGraph(object):
             debug("actually searching path reversed")
             vertex_a, vertex_b = vertex_b, vertex_a
 
-        # check if we can serve the request from the cache
+        #~ # check if we can serve the request from the cache
         forward_cache_entry = vertex_a.hops_cache.get(vertex_b, None)
         if forward_cache_entry is not None:
             debug("hops cache hit (forward)")
@@ -388,6 +394,9 @@ class GolfGraph(object):
         currently_visiting = None
         while currently_enqueued:
             currently_visiting = currently_enqueued.popleft()
+
+            assert currently_visiting.dirty is False, \
+                   "visited a dirty vertex while searching hops"
 
             # check if we arrived at the target vertex
             if currently_visiting == vertex_b:
@@ -474,7 +483,7 @@ class GolfGraph(object):
         assert bool(self.vertices), "cannot analyze graph w/o vertices"
 
         if self._dirty:
-            self._invalidate_caches()
+            self.clean()
 
         longest_shortest_path = -1
         lengths_sum = 0
@@ -518,18 +527,19 @@ class GolfGraph(object):
         # create a fresh graph with fresh vertices
         dup = self.__class__(self.order, self.degree)
 
-        # copy over shortest path caches
-        for dup_vertex, self_vertex in zip(dup.vertices, self.vertices):
-            dup_vertex.hops_cache = (
-                self_vertex.hops_cache.copy()
-            )
-
         # duplicate edges
         for vertex_a, vertex_b in self.edges():
             dup.add_edge_unsafe(
                 dup.vertices[vertex_a.id],
                 dup.vertices[vertex_b.id]
             )
+
+        # copy over shortest path caches
+        for dup_vertex, self_vertex in zip(dup.vertices, self.vertices):
+            dup_vertex.hops_cache = (
+                self_vertex.hops_cache.copy()
+            )
+            dup_vertex.dirty = self_vertex.dirty
 
         # copy analysis data
         dup.diameter = self.diameter
@@ -555,9 +565,16 @@ class GolfGraph(object):
 
         return True
 
-    def _invalidate_caches(self):
+    @property
+    def dity(self):
+        """ Read-only property. Use ``clean()`` to set to ``False``. """
+        return self._dirty
+
+    def clean(self):
         """
-        Invalidates internally cached values.
+        Does everything to get graphs dirty flag back to clean.
+
+        Namely, this invalidates internally cached values.
 
         This is quite expensive. Consider wisely when calling this.
         """
@@ -572,6 +589,14 @@ class GolfGraph(object):
 
         # loop over all vertices (we have to check *all* the caches):
         for vertex in self.vertices:
+
+            # drop the whole cache if this vertex is dirty
+            if vertex.dirty:
+                vertex.hops_cache = dict()
+                continue
+
+            # if this vertex is clean, invalidated only cache entries
+            # that relate to a dirty vertex
 
             # this is where we store what to invalidate later on:
             # (this pattern avoids copying the hops cache, what would
@@ -617,7 +642,7 @@ class GolfGraph(object):
         # an iterable of IDs. After invalidating the corresponding caches,
         # this iterable will be empty.
         if self._dirty:
-            self._invalidate_caches()
+            self.clean()
         assert not self._dirty
 
         debug("collecting all attributes but vertices")
