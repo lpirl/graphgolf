@@ -8,6 +8,7 @@ from abc import ABCMeta
 from random import choice, sample
 from logging import debug, info, warning
 from itertools import combinations
+from math import log
 
 from lib.graph_elements import GraphPartitionedError
 
@@ -26,6 +27,16 @@ class EnhancerRegistry(object):
         raise RuntimeError(self.__init__.__doc__)
 
     @classmethod
+    def register_multiple(cls, times):
+        """
+        Decorator to register a class multiple times.
+        """
+        def _register_multiple(enhancer_cls):
+            for _ in range(times):
+                cls.register(enhancer_cls)
+        return _register_multiple
+
+    @classmethod
     def register(cls, enhancer_cls):
         """
         To be used as decorator for classes to register them.
@@ -40,6 +51,15 @@ class AbstractBaseEnhancer(object):
     """
 
     __metaclass__ = ABCMeta
+
+    MODIFICATIONS = None
+    """
+    Number of modifications to apply to graph before throwing the
+    modified graph away and start again with the best graph known.
+
+    If ``None``, we'll use ``int(log(order*degree, 1.1))``.
+    Why 1.1? I don't know.
+    """
 
     def __init__(self, arg_parser):
         self.arg_parser = arg_parser
@@ -70,29 +90,36 @@ class AbstractBaseEnhancer(object):
             info("graph fully connected - no need to do anything")
             return
 
+        modifications = self.MODIFICATIONS or \
+                        int(log(best_graph.order*best_graph.degree, 1.1))
+
         while True:
 
-            # get a modified graph
+            # get a new copy of best graph to work with
             current_graph = best_graph.duplicate()
-            current_graph = self.modify_graph(current_graph)
 
-            if not current_graph:
-                warning("%s did not return a graph", self.__class__.__name__)
-                return
+            for _ in range(modifications):
 
-            # analyze
-            try:
-                current_graph.analyze()
-            except GraphPartitionedError:
-                continue
-            diameter_diff = current_graph.diameter - best_graph.diameter
-            aspl_diff = (current_graph.aspl -
-                         best_graph.aspl)
-            if ((diameter_diff < 0 and aspl_diff <= 0) or
-                    (diameter_diff <= 0 and aspl_diff < 0)):
-                info("%s found %s", self.__class__.__name__, current_graph)
-                report_queue.put(current_graph)
-                return
+                # get a modified graph
+                current_graph = self.modify_graph(current_graph)
+
+                if not current_graph:
+                    warning("%s did not return a graph", self.__class__.__name__)
+                    return
+
+                # analyze
+                try:
+                    current_graph.analyze()
+                except GraphPartitionedError:
+                    continue
+                diameter_diff = current_graph.diameter - best_graph.diameter
+                aspl_diff = (current_graph.aspl -
+                             best_graph.aspl)
+                if ((diameter_diff < 0 and aspl_diff <= 0) or
+                        (diameter_diff <= 0 and aspl_diff < 0)):
+                    info("%s found %s", self.__class__.__name__, current_graph)
+                    report_queue.put(current_graph)
+                    return
 
     @staticmethod
     def modify_graph(graph):
@@ -371,53 +398,36 @@ class ShortcutLongestPaths(AbstractLongestPathEnhancers):
 
 
 
+@EnhancerRegistry.register_multiple(1)
 class RandomlyReplaceOneEdgeEnhancer(AbstractRandomlyReplaceEdgesEnhancer):
     """
     See ``AbstractRandomlyReplaceEdgesEnhancer``.
     """
     NUMBER_OF_EDGES_TO_REPLACE = 1
 
-for _ in range(1):
-    EnhancerRegistry.register(RandomlyReplaceOneEdgeEnhancer)
-
-
-
+@EnhancerRegistry.register_multiple(1)
 class RandomlyReplaceTwoEdgesEnhancer(AbstractRandomlyReplaceEdgesEnhancer):
     """
     See ``AbstractRandomlyReplaceEdgesEnhancer``.
     """
     NUMBER_OF_EDGES_TO_REPLACE = 2
 
-for _ in range(1):
-    EnhancerRegistry.register(RandomlyReplaceTwoEdgesEnhancer)
-
-
-
+@EnhancerRegistry.register_multiple(1)
 class  RandomlyReplaceTenPercentEdgesEnhancer(
     AbstractRandomlyReplacePercentageOfEdgesEnhancer
 ):
     """ See super class' docstring. """
     PERCENTAGE = 10
 
-for _ in range(1):
-    EnhancerRegistry.register(RandomlyReplaceTenPercentEdgesEnhancer)
-
-
-
+@EnhancerRegistry.register_multiple(1)
 class UnlinkOneVerexEnhancer(AbstractUnlinkNumberOfVerticesEnhancer):
     """ See super class' docstring. """
     NUMBER_OF_VERTICES_TO_REPLACE = 1
 
-for _ in range(1):
-    EnhancerRegistry.register(UnlinkOneVerexEnhancer)
 
-
-
+@EnhancerRegistry.register_multiple(1)
 class UnlinkTenPercentageOfVerticesEnhancer(
     AbstractUnlinkPercentageOfVerticesEnhancer
 ):
     """ See super class' docstring. """
     PERCENTAGE = 10
-
-for _ in range(1):
-    EnhancerRegistry.register(UnlinkTenPercentageOfVerticesEnhancer)
