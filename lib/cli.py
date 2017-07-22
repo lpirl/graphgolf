@@ -142,9 +142,7 @@ class Cli(object):
         while True:
 
             # check termination criteria
-            if (self.best_graph.diameter <=
-                self.best_graph.diameter_lower_bound and
-                self.best_graph.aspl <= self.best_graph.aspl_lower_bound):
+            if self.best_graph.ideal():
                 print("found best graph")
                 return
 
