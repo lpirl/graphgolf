@@ -3,7 +3,7 @@ from copy import deepcopy
 from pickle import loads, dumps
 
 from test import BaseTest
-from lib.graph_elements import GolfGraph, Vertex
+from lib.graph_elements import GolfGraph, Vertex, GraphPartitionedError
 
 class GolfGraphTest(BaseTest):
     """
@@ -181,7 +181,7 @@ class GolfGraphTest(BaseTest):
         """
         graph = GolfGraph(3, 2)
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(GraphPartitionedError):
             graph.analyze()
 
     def test_analyze_triangle(self):
@@ -305,3 +305,49 @@ class GolfGraphTest(BaseTest):
                     tuple(v.hops_cache for v in edge_a),
                     tuple(v.hops_cache for v in edge_b)
                 )
+
+    def test_hops_cache_reverse_lookup(self):
+        """
+        Tests for a wrong ASPL that was returned for a specific graph
+        after implementing reverse hops cache lookups.
+        """
+        graph = GolfGraph(32, 5)
+        edges = [
+            (0, [2, 31, 8, 16, 15]),
+            (1, [4, 26, 27, 29, 11]),
+            (2, [25, 29, 15, 7]),
+            (3, [18, 17, 27, 8, 16]),
+            (4, [21, 5, 28, 10]),
+            (5, [14, 22, 24, 15]),
+            (6, [16, 14, 30, 19, 9]),
+            (7, [13]),
+            (7, [20, 12, 10]),
+            (8, [29, 15, 24]),
+            (9, [23, 18, 28, 22]),
+            (10, [24, 16, 11]),
+            (11, [22, 26, 17]),
+            (12, [31, 30, 14, 29]),
+            (13, [17, 28, 19, 23]),
+            (14, [21, 25]),
+            (15, [23]),
+            (16, [20]),
+            (17, [22, 26]),
+            (18, [29, 26, 24]),
+            (19, [22, 27, 20]),
+            (20, [25, 23]),
+            (21, [30, 25, 23]),
+            (24, [31]),
+            (25, [26]),
+            (27, [31, 28]),
+            (28, [30]),
+            (30, [31]),
+            ]
+        for vertex_a_i, vertex_b_is in edges:
+            for vertex_b_i in vertex_b_is:
+                graph.add_edge_unsafe(
+                    graph.vertices[vertex_a_i],
+                    graph.vertices[vertex_b_i]
+                )
+        graph.analyze()
+        self.assertEqual(graph.diameter, 4)
+        self.assertEqual(round(graph.aspl, 12), 2.20564516129)
