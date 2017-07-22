@@ -146,7 +146,7 @@ class Cli(object):
                 self.best_graph.diameter_lower_bound and
                 self.best_graph.aspl <= self.best_graph.aspl_lower_bound):
                 print("found best graph")
-                exit(0)
+                return
 
             # create processes
             for enhancer in self.enhancers:
