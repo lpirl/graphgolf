@@ -64,8 +64,7 @@ class AbstractBase(object):
     Number of modifications to apply to graph before throwing the
     modified graph away and start again with the best graph known.
 
-    If ``None``, we'll use ``int(log(order*degree, 1.1))``.
-    Why 1.1? I don't know.
+    If ``None``, we'll use ``order*degree``.
     """
 
     def __init__(self, arg_parser):
@@ -107,7 +106,7 @@ class AbstractBase(object):
             return
 
         modifications = self.MODIFICATIONS or \
-                        int(log(best_graph.order*best_graph.degree, 1.1))
+                        int(best_graph.order*best_graph.degree)
 
         while self.active:
 
