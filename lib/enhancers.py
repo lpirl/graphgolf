@@ -383,8 +383,7 @@ class AbstractRandomlyReplacePercentageOfEdges(
     """to be set by subclasses"""
 
     def _number_of_edges_to_replace(self, graph):
-        edges_approx = graph.order * min(graph.order, graph.degree)
-        return int(self.PERCENTAGE * edges_approx / 100)
+        return int(self.PERCENTAGE * graph.order / 100)
 
 
 
