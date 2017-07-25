@@ -10,7 +10,7 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
 from multiprocessing import Process, Manager
 
-from lib.enhancers import EnhancerRegistry
+from lib.enhancers import Registry as EnhancerRegistry
 from lib.graph_elements import GolfGraph
 
 class Cli(object):
