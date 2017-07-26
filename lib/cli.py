@@ -6,6 +6,7 @@ program.
 # encoding: UTF-8
 
 from sys import argv
+from os import wait
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
 from multiprocessing import Process, Manager
@@ -163,8 +164,7 @@ class Cli(object):
                 process.start()
 
             # wait for any of them
-            self.best_graph = report_queue.get()
-            print(self.best_graph)
+            wait()
 
             # kill the rest
             while processes:
@@ -174,7 +174,8 @@ class Cli(object):
 
             # in case processes submitted a graph before they got killed
             while not report_queue.empty():
-                report_queue.get()
+                self.best_graph = min(report_queue.get(), self.best_graph)
+            print(self.best_graph)
 
             if self.args.once:
                 break
@@ -189,6 +190,7 @@ class Cli(object):
             for enhancer in self.enhancers:
                 if enhancer.applicable_to(self.best_graph):
                     enhancer.enhance(self.best_graph, report_queue)
+                    self.best_graph = report_queue.get()
 
             if self.args.once:
                 break

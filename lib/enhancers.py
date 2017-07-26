@@ -131,11 +131,7 @@ class AbstractBase(object):
                     current_graph.analyze()
                 except GraphPartitionedError:
                     continue
-                diameter_diff = current_graph.diameter - best_graph.diameter
-                aspl_diff = (current_graph.aspl -
-                             best_graph.aspl)
-                if ((diameter_diff < 0 and aspl_diff <= 0) or
-                        (diameter_diff <= 0 and aspl_diff < 0)):
+                if current_graph < best_graph:
                     info("%s found %s", self.__class__.__name__, current_graph)
                     report_queue.put(current_graph)
                     return
@@ -391,12 +387,12 @@ class AbstractRandomlyReplacePercentageOfEdges(
 # register concrete classes
 #
 
-Registry.register_multiple(1)(ConnectMostDistantVertices)
+#~ Registry.register_multiple(1)(ConnectMostDistantVertices)
 Registry.register_multiple(1)(RandomlyRelinkMostDistantVertices)
 Registry.register_multiple(1)(RandomlyRelinkAllInTooLongPaths)
 Registry.register_multiple(1)(RandomlyRelinkMostDistantInTooLongPaths)
 
-@Registry.register_multiple(1)
+#~ @Registry.register_multiple(1)
 class RandomlyReplaceOneEdge(AbstractRandomlyReplaceRandomEdges):
     """ See ``AbstractRandomlyReplaceRandomEdges``. """
     NUMBER_OF_EDGES_TO_REPLACE = 1

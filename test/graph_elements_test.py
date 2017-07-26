@@ -169,9 +169,6 @@ class GolfGraphTest(BaseTest):
             graph = GolfGraph(order, degree)
             graph.add_as_many_random_edges_as_possible()
             graph.analyze()
-            if graph.diameter > 1:
-                import pdb
-                pdb.set_trace()
             self.assertEqual(1, graph.diameter)
             self.assertEqual(1, graph.aspl)
 
@@ -351,3 +348,20 @@ class GolfGraphTest(BaseTest):
         graph.analyze()
         self.assertEqual(graph.diameter, 4)
         self.assertEqual(round(graph.aspl, 12), 2.20564516129)
+
+    def test_comparison(self):
+        """
+        Tests whether our implementation of ``__lt__`` does what we want.
+        """
+        orders_degrees = ((5, 4), (10, 9), (10, 11))
+        for order, degree in orders_degrees:
+            graph_a = GolfGraph(order, degree)
+            graph_a.add_as_many_random_edges_as_possible()
+            graph_a.analyze()
+            graph_b = graph_a.duplicate()
+            self.assertFalse(graph_a < graph_b)
+            self.assertFalse(graph_a > graph_b)
+            graph_b.remove_edge_unsafe(graph_b.vertices[0],
+                                       graph_b.vertices[1])
+            graph_b.analyze()
+            self.assertTrue(graph_a < graph_b)

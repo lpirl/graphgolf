@@ -536,14 +536,13 @@ class GolfGraph(object):
 
         # copy over shortest path caches
         for dup_vertex, self_vertex in zip(dup.vertices, self.vertices):
-            dup_vertex.hops_cache = (
-                self_vertex.hops_cache.copy()
-            )
+            dup_vertex.hops_cache = self_vertex.hops_cache.copy()
             dup_vertex.dirty = self_vertex.dirty
 
         # copy analysis data
         dup.diameter = self.diameter
         dup.aspl = self.aspl
+        dup._dirty = self._dirty
 
         return dup
 
@@ -627,6 +626,27 @@ class GolfGraph(object):
             vertex.dirty = False
         self._dirty = False
 
+    def __lt__(self, other):
+        """
+        Returns ``True`` if this graph is better than the ``other``.
+        "Better" means, that the diameter or the average shortest path
+        length is lower.
+        """
+        assert self.order == other.order
+        assert self.degree == other.degree
+        assert self.diameter is not None
+        assert self.aspl is not None
+        assert other.diameter is not None
+        assert other.aspl is not None
+        assert self._dirty is False
+        assert other._dirty is False
+        if self.diameter > other.diameter:
+            return False
+        elif self.diameter < other.diameter:
+            return True
+        assert self.diameter == other.diameter
+        return self.aspl < other.aspl
+
     def __getstate__(self):
         """
         This is our custom implementation to pickle a graph.
@@ -643,7 +663,8 @@ class GolfGraph(object):
         # this iterable will be empty.
         if self._dirty:
             self.clean()
-        assert not self._dirty
+        assert max(v.dirty for v in self.vertices) is False, \
+               "not all vertices clean"
 
         debug("collecting all attributes but vertices")
         state = {k: v
@@ -694,6 +715,9 @@ class GolfGraph(object):
                 vertices[dest_id]: [vertices[hop_id] for hop_id in hop_ids]
                 for dest_id, hop_ids in hops_cache.items()
             }
+            # we made sure we ``__getstate__``ed a clean graph,
+            # so we can do:
+            vertex.dirty = False
 
         debug("restoring remaining attributes")
         for key, value in state.items():
