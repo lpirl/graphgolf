@@ -371,15 +371,14 @@ class GolfGraph(object):
             debug("actually searching path reversed")
             vertex_a, vertex_b = vertex_b, vertex_a
 
-        #~ # check if we can serve the request from the cache
-        forward_cache_entry = vertex_a.hops_cache.get(vertex_b, None)
-        if forward_cache_entry is not None:
-            debug("hops cache hit (forward)")
-            return forward_cache_entry
-        reverse_cache_entry = vertex_b.hops_cache.get(vertex_a, None)
-        if reverse_cache_entry is not None:
-            debug("hops cache hit (reverse)")
-            return list(reversed(reverse_cache_entry))
+        # check if we can serve the request from the cache
+        cache_entry = vertex_a.hops_cache.get(vertex_b, None)
+        if cache_entry is not None:
+            debug("hops cache hit")
+            if reverse:
+                return tuple(reversed(cache_entry))
+            else:
+                return cache_entry
 
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
@@ -423,9 +422,14 @@ class GolfGraph(object):
         # loop until we arrive at the start vertex (and skip it as well)
         while currently_visiting != vertex_a:
 
-            # fill the hops cache:
-            if vertex_b not in currently_visiting.hops_cache:
-                currently_visiting.hops_cache[vertex_b] = tuple(hops)
+            # fill the hops cache (smaller ID to larger ID only):
+            if currently_visiting < vertex_b:
+                if vertex_b not in currently_visiting.hops_cache:
+                    currently_visiting.hops_cache[vertex_b] = tuple(hops)
+            else:
+                assert vertex_b < currently_visiting
+                if currently_visiting not in vertex_b.hops_cache:
+                    vertex_b.hops_cache[currently_visiting] = tuple(reversed(hops))
 
             # remember this vertex as hop
             hops.insert(0, currently_visiting)
@@ -642,9 +646,8 @@ class GolfGraph(object):
         assert other._dirty is False
         if self.diameter > other.diameter:
             return False
-        elif self.diameter < other.diameter:
+        if self.diameter < other.diameter:
             return True
-        assert self.diameter == other.diameter
         return self.aspl < other.aspl
 
     def __getstate__(self):

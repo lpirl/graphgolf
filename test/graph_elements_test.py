@@ -378,3 +378,14 @@ class GolfGraphTest(BaseTest):
                                        graph_b.vertices[1])
             graph_b.analyze()
             self.assertTrue(graph_a < graph_b)
+
+    def test_hops_caches_only_forward(self):
+        """
+        Tests whether we have only "smaller ID to larger ID" entries in
+        the hops caches of vertices:
+        """
+        for graph in self.some_valid_graphs():
+            graph.analyze()
+            for vertex in graph.vertices:
+                for target in vertex.hops_cache:
+                    self.assertTrue(vertex < target)
