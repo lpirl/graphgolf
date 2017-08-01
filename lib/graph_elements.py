@@ -92,6 +92,15 @@ class Vertex(object):
         """
         Returns hops cache entry between ``self`` and ``other`` or
         ``None``.
+
+        A note on protected access:
+        If ``other < self`` we should actually call this function of the
+        ``other`` instance to avoid access to its protected member.
+        I think we can violate the rule here to save an extra function
+        call and an extra comparison.
+        The code is not very complex either and the protected member
+        belongs to an instance of the same class, so we know what we are
+        doing.
         """
         assert self != other
         if self < other:
@@ -103,6 +112,8 @@ class Vertex(object):
         """
         Sets hops cache entry between ``self`` and ``other`` or
         ``None``.
+
+        See also "A note on protected access" in ``hops_cache_get``.
         """
         assert self != other
         if self < other:
@@ -113,6 +124,8 @@ class Vertex(object):
     def hops_cache_unset(self, other):
         """
         Removes cache entry for ``other``.
+
+        See also "A note on protected access" in ``hops_cache_get``.
         """
         assert self != other
         if self < other:
@@ -123,12 +136,16 @@ class Vertex(object):
     def hops_cache_clear(self):
         """
         Clear the hops cache.
+
+        See also "A note on protected access" in ``hops_cache_get``.
         """
         self._hops_cache = dict()
 
     def hops_cache_has(self, other):
         """
         Returns whether cache entry between ``self`` and ``other`` exists.
+
+        See also "A note on protected access" in ``hops_cache_get``.
         """
         assert self != other
         if self < other:
@@ -139,6 +156,8 @@ class Vertex(object):
     def hops_cache_items(self):
         """
         Returns iterable of (target, hops) tuples.
+
+        See also "A note on protected access" in ``hops_cache_get``.
         """
         return self._hops_cache.items()
 
@@ -507,7 +526,7 @@ class GolfGraph(object):
         for vertex in self.vertices:
             vertex.breadcrumb = None
 
-        return hops
+        return tuple(hops)
 
     def hops_count(self, vertex_a, vertex_b):
         """

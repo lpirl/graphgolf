@@ -5,10 +5,9 @@ This module contains classes that enhance a graph.
 """
 
 from abc import ABCMeta
-from random import choice, sample
+from random import sample
 from logging import debug, info, warning
 from itertools import combinations, chain
-from math import log
 
 from lib.graph_elements import GraphPartitionedError
 
@@ -373,7 +372,7 @@ class AbstractRandomlyReplaceRandomEdges(AbstractRandomlyRelinkVertices):
 
 
 class AbstractRandomlyReplacePercentageOfEdges(
-    AbstractRandomlyReplaceRandomEdges
+        AbstractRandomlyReplaceRandomEdges
 ):
     """
     Like ``AbstractRandomlyReplaceRandomEdges`` but configured via a
@@ -410,7 +409,7 @@ class RandomlyReplaceTwoEdges(AbstractRandomlyReplaceRandomEdges):
 
 @Registry.register_multiple(1)
 class  RandomlyReplaceTenPercentEdges(
-    AbstractRandomlyReplacePercentageOfEdges
+        AbstractRandomlyReplacePercentageOfEdges
 ):
     """ See super class' docstring. """
     PERCENTAGE = 10
