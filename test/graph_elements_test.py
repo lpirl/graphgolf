@@ -158,7 +158,7 @@ class GolfGraphTest(BaseTest):
         graph = self.triangle_graph()
 
         for edge in permutations(graph.vertices, 2):
-            self.assertEqual([], graph.hops(*edge))
+            self.assertEqual(tuple(), tuple(graph.hops(*edge)))
 
     def test_hops_fully_connected(self):
         """
@@ -306,8 +306,8 @@ class GolfGraphTest(BaseTest):
 
                     # compare hops caches
                     for vertex_a, vertex_b in zip(edge_a, edge_b):
-                        for cache_a, cache_b in zip(vertex_a.hops_cache.items(),
-                                                      vertex_b.hops_cache.items()):
+                        for cache_a, cache_b in zip(vertex_a.hops_cache_items(),
+                                                      vertex_b.hops_cache_items()):
                             target_a, hops_a = cache_a
                             target_b, hops_b = cache_b
                             self.assertEqual(target_a.id, target_b.id)
@@ -387,5 +387,5 @@ class GolfGraphTest(BaseTest):
         for graph in self.some_valid_graphs():
             graph.analyze()
             for vertex in graph.vertices:
-                for target in vertex.hops_cache:
+                for target, _ in vertex.hops_cache_items():
                     self.assertTrue(vertex < target)

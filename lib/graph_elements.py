@@ -41,7 +41,7 @@ class Vertex(object):
         tests. Lists appeared to perform almost 10% better than sets.
         """
 
-        self.hops_cache = dict()
+        self._hops_cache = dict()
         """
         A cache for found paths. Stores only intermediate hops.
         Maps target vertices to shortest paths.
@@ -88,6 +88,59 @@ class Vertex(object):
     def __repr__(self):
         return self.__str__()
 
+    def hops_cache_get(self, other):
+        """
+        Returns hops cache entry between ``self`` and ``other`` or
+        ``None``.
+        """
+        assert self != other
+        if self < other:
+            return self._hops_cache.get(other, None)
+        else:
+            return reversed(other._hops_cache.get(self, None))
+
+    def hops_cache_set(self, other, hops):
+        """
+        Sets hops cache entry between ``self`` and ``other`` or
+        ``None``.
+        """
+        assert self != other
+        if self < other:
+            self._hops_cache[other] = hops
+        else:
+            other._hops_cache[self] = tuple(reversed(hops))
+
+    def hops_cache_unset(self, other):
+        """
+        Removes cache entry for ``other``.
+        """
+        assert self != other
+        if self < other:
+            del self._hops_cache[other]
+        else:
+            del other._hops_cache[self]
+
+    def hops_cache_clear(self):
+        """
+        Clear the hops cache.
+        """
+        self._hops_cache = dict()
+
+    def hops_cache_has(self, other):
+        """
+        Returns whether cache entry between ``self`` and ``other`` exists.
+        """
+        assert self != other
+        if self < other:
+            return other in self._hops_cache
+        else:
+            return self in other._hops_cache
+
+    def hops_cache_items(self):
+        """
+        Returns iterable of (target, hops) tuples.
+        """
+        return self._hops_cache.items()
 
 
 class GolfGraph(object):
@@ -372,7 +425,7 @@ class GolfGraph(object):
             vertex_a, vertex_b = vertex_b, vertex_a
 
         # check if we can serve the request from the cache
-        cache_entry = vertex_a.hops_cache.get(vertex_b, None)
+        cache_entry = vertex_a.hops_cache_get(vertex_b)
         if cache_entry is not None:
             debug("hops cache hit")
             if reverse:
@@ -401,6 +454,10 @@ class GolfGraph(object):
             if currently_visiting == vertex_b:
                 break
 
+            # check if there is a cache entry:
+            # TODO
+
+            # enqueue connected vertices
             for edge_to in currently_visiting.edges_to:
                 if edge_to.breadcrumb is None:
                     assert edge_to != vertex_a, \
@@ -423,19 +480,16 @@ class GolfGraph(object):
         while currently_visiting != vertex_a:
 
             # fill the hops cache (smaller ID to larger ID only):
-            if currently_visiting < vertex_b:
-                if vertex_b not in currently_visiting.hops_cache:
-                    currently_visiting.hops_cache[vertex_b] = tuple(hops)
-            else:
-                assert vertex_b < currently_visiting
-                if currently_visiting not in vertex_b.hops_cache:
-                    vertex_b.hops_cache[currently_visiting] = tuple(reversed(hops))
+            if not currently_visiting.hops_cache_has(vertex_b):
+                currently_visiting.hops_cache_set(vertex_b, tuple(hops))
 
             # remember this vertex as hop
             hops.insert(0, currently_visiting)
 
             # move on (i.e., continue to follow the breadcrumbs back)
             currently_visiting = currently_visiting.breadcrumb
+
+        vertex_a.hops_cache_set(vertex_b, hops)
 
         assert vertex_a not in hops and vertex_b not in hops, \
                "neither start nor destination node should be returned"
@@ -540,7 +594,7 @@ class GolfGraph(object):
 
         # copy over shortest path caches
         for dup_vertex, self_vertex in zip(dup.vertices, self.vertices):
-            dup_vertex.hops_cache = self_vertex.hops_cache.copy()
+            dup_vertex._hops_cache = self_vertex._hops_cache.copy()
             dup_vertex.dirty = self_vertex.dirty
 
         # copy analysis data
@@ -595,7 +649,7 @@ class GolfGraph(object):
 
             # drop the whole cache if this vertex is dirty
             if vertex.dirty:
-                vertex.hops_cache = dict()
+                vertex.hops_cache_clear()
                 continue
 
             # if this vertex is clean, invalidated only cache entries
@@ -607,7 +661,7 @@ class GolfGraph(object):
             keys_to_invalidate = set()
 
             # loop over all cache entries of that vertex:
-            for target, hops in vertex.hops_cache.items():
+            for target, hops in vertex.hops_cache_items():
 
                 # check if the target of that cache entry is a modified
                 # vertex
@@ -623,7 +677,7 @@ class GolfGraph(object):
 
             # now actually clear items from the vertex' cache
             for key_to_invalidate in keys_to_invalidate:
-                del vertex.hops_cache[key_to_invalidate]
+                vertex.hops_cache_unset(key_to_invalidate)
 
         # reset dirty flags
         for vertex in self.vertices:
@@ -685,7 +739,7 @@ class GolfGraph(object):
             # map a destination to IDs of the "hop vertices"
             # (like ``Vertex``'s  ``hops_cache`` but with IDs).
             {dest.id: tuple(hop.id for hop in hops)
-             for dest, hops in vertex.hops_cache.items()}
+             for dest, hops in vertex.hops_cache_items()}
             for vertex in self.vertices
         )
 
@@ -714,7 +768,7 @@ class GolfGraph(object):
         hops_caches = state.pop("hops_caches")
         assert len(vertices) == len(hops_caches)
         for vertex, hops_cache in zip(vertices, hops_caches):
-            vertex.hops_cache = {
+            vertex._hops_cache = {
                 vertices[dest_id]: tuple(vertices[hop_id] for hop_id in hop_ids)
                 for dest_id, hop_ids in hops_cache.items()
             }
