@@ -281,27 +281,40 @@ class GolfGraphTest(BaseTest):
         Tests graph pickling.
         """
         for graph in self.some_valid_graphs():
+            graph.analyze()
             unpickled = loads(dumps(graph))
 
-            for attr_name in ("order", "degree", "aspl", "diameter"):
-                self.assertEqual(
-                    getattr(graph, attr_name),
-                    getattr(unpickled, attr_name),
-                )
+            # two times: 1st as unpickled, 2nd re-``analyzed``
+            for _ in range(2):
 
-            for edge_a, edge_b in zip(graph.edges(), unpickled.edges()):
+                for attr_name in ("order", "degree", "aspl", "diameter"):
+                    self.assertEqual(
+                        getattr(graph, attr_name),
+                        getattr(unpickled, attr_name),
+                    )
 
-                # we cannot compare the vertices directly; would raise
-                # assertions
-                self.assertEqual(
-                    tuple(v.id for v in edge_a),
-                    tuple(v.id for v in edge_b)
-                )
+                for edge_a, edge_b in zip(graph.edges(), unpickled.edges()):
 
-                self.assertEqual(
-                    tuple(v.hops_cache for v in edge_a),
-                    tuple(v.hops_cache for v in edge_b)
-                )
+                    # we cannot compare the vertices directly (would raise
+                    # assertions) so we iterate over eeeeverything...
+
+                    # compare edges themselves
+                    self.assertEqual(
+                        tuple(v.id for v in edge_a),
+                        tuple(v.id for v in edge_b)
+                    )
+
+                    # compare hops caches
+                    for vertex_a, vertex_b in zip(edge_a, edge_b):
+                        for cache_a, cache_b in zip(vertex_a.hops_cache.items(),
+                                                      vertex_b.hops_cache.items()):
+                            target_a, hops_a = cache_a
+                            target_b, hops_b = cache_b
+                            self.assertEqual(target_a.id, target_b.id)
+                            for hop_a, hop_b in zip(hops_a, hops_b):
+                                self.assertEqual(hop_a.id, hop_b.id)
+
+                unpickled.analyze()
 
     def test_hops_cache_reverse_lookup(self):
         """

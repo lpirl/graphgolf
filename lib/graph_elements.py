@@ -712,7 +712,7 @@ class GolfGraph(object):
         assert len(vertices) == len(hops_caches)
         for vertex, hops_cache in zip(vertices, hops_caches):
             vertex.hops_cache = {
-                vertices[dest_id]: [vertices[hop_id] for hop_id in hop_ids]
+                vertices[dest_id]: tuple(vertices[hop_id] for hop_id in hop_ids)
                 for dest_id, hop_ids in hops_cache.items()
             }
             # we made sure we ``__getstate__``ed a clean graph,
