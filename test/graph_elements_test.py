@@ -138,7 +138,7 @@ class GolfGraphTest(BaseTest):
         """
         graph = GolfGraph(2, 2)
         graph.add_as_many_random_edges_as_possible()
-        self.assertEqual([], graph.hops(*graph.vertices))
+        self.assertEqual(tuple(), graph.hops(*graph.vertices))
 
     def test_hops_line(self):
         """
@@ -146,9 +146,9 @@ class GolfGraphTest(BaseTest):
         """
         graph = self.line_graph()
         vertices = graph.vertices
-        self.assertEqual([], graph.hops(vertices[0], vertices[1]))
-        self.assertEqual([], graph.hops(vertices[1], vertices[2]))
-        self.assertEqual([vertices[1]],
+        self.assertEqual(tuple(), graph.hops(vertices[0], vertices[1]))
+        self.assertEqual(tuple(), graph.hops(vertices[1], vertices[2]))
+        self.assertEqual((vertices[1], ),
                          graph.hops(vertices[0], vertices[2]))
 
     def test_hops_triangle(self):
@@ -228,7 +228,7 @@ class GolfGraphTest(BaseTest):
         graph = self.rectangle_graph()
         vertices = graph.vertices
         graph.remove_edge_unsafe(vertices[0], vertices[-1])
-        self.assertEqual(vertices[1:-1],
+        self.assertEqual(tuple(vertices[1:-1]),
                          graph.hops(vertices[0], vertices[-1]))
 
     def test_duplicate_rectangle(self):
