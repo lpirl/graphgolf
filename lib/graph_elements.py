@@ -117,8 +117,10 @@ class Vertex(object):
         """
         assert self != other
         if self < other:
+            assert other not in self._hops_cache
             self._hops_cache[other] = hops
         else:
+            assert self not in other._hops_cache
             other._hops_cache[self] = tuple(reversed(hops))
 
     def hops_cache_unset(self, other):
