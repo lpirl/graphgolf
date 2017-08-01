@@ -437,20 +437,11 @@ class GolfGraph(object):
         assert vertex_a.dirty is False, "cannot search hops: vertex A dirty"
         assert vertex_b.dirty is False, "cannot search hops: vertex B dirty"
 
-        # we search paths always in one direction (smaller to bigger ID)
-        reverse = vertex_a > vertex_b
-        if reverse:
-            debug("actually searching path reversed")
-            vertex_a, vertex_b = vertex_b, vertex_a
-
         # check if we can serve the request from the cache
         cache_entry = vertex_a.hops_cache_get(vertex_b)
         if cache_entry is not None:
             debug("hops cache hit")
-            if reverse:
-                return tuple(reversed(cache_entry))
-            else:
-                return cache_entry
+            return cache_entry
 
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
@@ -512,11 +503,6 @@ class GolfGraph(object):
 
         assert vertex_a not in hops and vertex_b not in hops, \
                "neither start nor destination node should be returned"
-
-        # if we searched reverse, we have to reverse the list of hops we
-        # return
-        if reverse:
-            hops.reverse()
 
         # vacuum breadcrumbs
         #   note: we could also re-walk the vertices we touched (by

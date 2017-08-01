@@ -392,24 +392,24 @@ class AbstractRandomlyReplacePercentageOfEdges(
 # register concrete classes
 #
 
-Registry.register_multiple(1)(ConnectMostDistantVertices)
-Registry.register_multiple(1)(RandomlyRelinkMostDistantVertices)
-Registry.register_multiple(1)(RandomlyRelinkAllInTooLongPaths)
+#~ Registry.register_multiple(1)(ConnectMostDistantVertices)
+#~ Registry.register_multiple(1)(RandomlyRelinkMostDistantVertices)
+#~ Registry.register_multiple(1)(RandomlyRelinkAllInTooLongPaths)
 Registry.register_multiple(1)(RandomlyRelinkMostDistantInTooLongPaths)
 
-@Registry.register_multiple(1)
-class RandomlyReplaceOneEdge(AbstractRandomlyReplaceRandomEdges):
-    """ See ``AbstractRandomlyReplaceRandomEdges``. """
-    NUMBER_OF_EDGES_TO_REPLACE = 1
+#~ @Registry.register_multiple(1)
+#~ class RandomlyReplaceOneEdge(AbstractRandomlyReplaceRandomEdges):
+    #~ """ See ``AbstractRandomlyReplaceRandomEdges``. """
+    #~ NUMBER_OF_EDGES_TO_REPLACE = 1
 
-@Registry.register_multiple(1)
-class RandomlyReplaceTwoEdges(AbstractRandomlyReplaceRandomEdges):
-    """ See ``AbstractRandomlyReplaceRandomEdges``. """
-    NUMBER_OF_EDGES_TO_REPLACE = 2
+#~ @Registry.register_multiple(1)
+#~ class RandomlyReplaceTwoEdges(AbstractRandomlyReplaceRandomEdges):
+    #~ """ See ``AbstractRandomlyReplaceRandomEdges``. """
+    #~ NUMBER_OF_EDGES_TO_REPLACE = 2
 
-@Registry.register_multiple(1)
-class  RandomlyReplaceTenPercentEdges(
-        AbstractRandomlyReplacePercentageOfEdges
-):
-    """ See super class' docstring. """
-    PERCENTAGE = 10
+#~ @Registry.register_multiple(1)
+#~ class  RandomlyReplaceTenPercentEdges(
+        #~ AbstractRandomlyReplacePercentageOfEdges
+#~ ):
+    #~ """ See super class' docstring. """
+    #~ PERCENTAGE = 10
