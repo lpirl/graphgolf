@@ -100,6 +100,9 @@ class AbstractBase(object):
         """
         info("enhancer %s started", self.__class__.__name__)
 
+        assert best_graph.aspl is not None and \
+               best_graph.diameter is not None, "graph must be analyzed"
+
         # pointless to do anything for completely connected graph
         if best_graph.order-1 <= best_graph.degree:
             info("graph fully connected - no need to do anything")
@@ -278,7 +281,12 @@ class ConnectMostDistantVertices(AbstractRandomlyRelinkVertices):
             # process source and destination vertex of one longest path
             for vertex in source_and_dest:
                 self.ensure_can_add_edge(graph, vertex)
-            graph.add_as_many_random_edges_as_possible(source_and_dest)
+            graph.add_edge_unsafe(*source_and_dest)
+
+        # ``self.ensure_can_add_edge`` might potentially removed edges to
+        # vertices other than those in ``source_and_dest``, let's add
+        # as many edges as allowed again
+        graph.add_as_many_random_edges_as_possible()
 
         return graph
 
@@ -304,7 +312,6 @@ class RandomlyRelinkMostDistantInTooLongPaths(AbstractRandomlyRelinkVertices):
             if len(hops)+1 > graph.diameter_lower_bound:
                 yield vertex_a
                 yield vertex_b
-        raise StopIteration
 
 
 
@@ -330,7 +337,6 @@ class RandomlyRelinkAllInTooLongPaths(AbstractRandomlyRelinkVertices):
                 for hop in hops:
                     yield hop
                 yield vertex_b
-        raise StopIteration
 
 
 
@@ -387,12 +393,12 @@ class AbstractRandomlyReplacePercentageOfEdges(
 # register concrete classes
 #
 
-#~ Registry.register_multiple(1)(ConnectMostDistantVertices)
+Registry.register_multiple(1)(ConnectMostDistantVertices)
 Registry.register_multiple(1)(RandomlyRelinkMostDistantVertices)
 Registry.register_multiple(1)(RandomlyRelinkAllInTooLongPaths)
 Registry.register_multiple(1)(RandomlyRelinkMostDistantInTooLongPaths)
 
-#~ @Registry.register_multiple(1)
+@Registry.register_multiple(1)
 class RandomlyReplaceOneEdge(AbstractRandomlyReplaceRandomEdges):
     """ See ``AbstractRandomlyReplaceRandomEdges``. """
     NUMBER_OF_EDGES_TO_REPLACE = 1
