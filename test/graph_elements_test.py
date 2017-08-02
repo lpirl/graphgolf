@@ -236,11 +236,26 @@ class GolfGraphTest(BaseTest):
         Tests graph duplication.
         """
         graph_a = self.rectangle_graph()
+        graph_a.analyze()
         graph_b = graph_a.duplicate()
 
-        graph_a.remove_edge_unsafe(graph_a.vertices[0], graph_a.vertices[1])
-        self.assertIn(graph_b.vertices[1], graph_b.vertices[0].edges_to)
-        self.assertIn(graph_b.vertices[0], graph_b.vertices[1].edges_to)
+        vertex_a0, vertex_a1 = graph_a.vertices[0:2]
+        vertex_b0, vertex_b1 = graph_b.vertices[0:2]
+
+        # check that the hops caches do not point to the old graph's
+        # vertices
+        for (target_a, hops_a), (target_b, hops_b) in zip(
+                vertex_a0.hops_cache_items(), vertex_b0.hops_cache_items()):
+            self.assertNotEqual(id(target_a), id(target_b))
+            for hop_a, hop_b in zip(hops_a, hops_b):
+                self.assertNotEqual(id(hop_a), id(hop_b))
+
+        # modify a
+        graph_a.remove_edge_unsafe(vertex_a0, vertex_a1)
+
+        # assert b not modified
+        self.assertIn(vertex_b1, vertex_b0.edges_to)
+        self.assertIn(vertex_b0, vertex_b1.edges_to)
 
     def test_edges_rectangle(self):
         """

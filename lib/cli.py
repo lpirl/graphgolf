@@ -6,7 +6,6 @@ program.
 # encoding: UTF-8
 
 from sys import argv
-from os import wait
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
 from multiprocessing import Process, Manager
@@ -164,7 +163,7 @@ class Cli(object):
                 process.start()
 
             # wait for any of them
-            wait()
+            self.best_graph = report_queue.get()
 
             # kill the rest
             while processes:

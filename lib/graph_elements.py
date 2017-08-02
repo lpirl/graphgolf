@@ -601,7 +601,21 @@ class GolfGraph(object):
 
         # copy over shortest path caches
         for dup_vertex, self_vertex in zip(dup.vertices, self.vertices):
-            dup_vertex._hops_cache = self_vertex._hops_cache.copy()
+
+            assert self_vertex.breadcrumb is None
+            assert dup_vertex.breadcrumb is None
+
+            # we cannot simply copy the cache, since the vertices in the
+            # caches do not point to the vertices  of ``dup`` yet, what
+            # is problematic when invalidating the hops caches in
+            # ``clean()``.
+            for target, hops in self_vertex.hops_cache_items():
+                # let's do an strongly discouraged protected access here
+                # since we do not need (i.e., want) the sanity checks
+                # of the vertices' ``hops_cache_set()``.
+                dup_vertex._hops_cache[dup.vertices[target.id]] = \
+                    tuple(dup.vertices[hop.id] for hop in hops)
+
             dup_vertex.dirty = self_vertex.dirty
 
         # copy analysis data
@@ -670,6 +684,10 @@ class GolfGraph(object):
             # loop over all cache entries of that vertex:
             for target, hops in vertex.hops_cache_items():
 
+                # just double-check we have to references to vertices of
+                # a graph this one was duplicated from
+                assert target in self.vertices
+
                 # check if the target of that cache entry is a modified
                 # vertex
                 if target.dirty:
@@ -678,6 +696,10 @@ class GolfGraph(object):
 
                 # check if a modified vertex is within the hops
                 for hop in hops:
+
+                    # again, double-check we have no old references here
+                    assert hop in self.vertices
+
                     if hop.dirty:
                         keys_to_invalidate.add(target)
                         break
