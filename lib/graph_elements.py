@@ -453,8 +453,9 @@ class GolfGraph(object):
             if currently_visiting == vertex_b:
                 break
 
-            # check if there is a cache entry:
-            # TODO
+            # note on the hops cache: sadly, we cannot use the hops cache
+            # here, since we could never know if another enqueued vertex
+            # might have a shorter connection to ``vertex_b``.
 
             # enqueue connected vertices
             for edge_to in currently_visiting.edges_to:
@@ -476,19 +477,23 @@ class GolfGraph(object):
         currently_visiting = currently_visiting.breadcrumb
 
         # loop until we arrive at the start vertex (and skip it as well)
-        while currently_visiting != vertex_a:
+        while True:
 
             # fill the hops cache:
             if not currently_visiting.hops_cache_has(vertex_b):
                 currently_visiting.hops_cache_set(vertex_b, tuple(hops))
+
+            # break the loop if we would re-visit the current vertex
+            # (also, skip adding it to ``hops``)
+            if currently_visiting == vertex_a:
+                assert currently_visiting == currently_visiting.breadcrumb
+                break
 
             # remember this vertex as hop
             hops.insert(0, currently_visiting)
 
             # move on (i.e., continue to follow the breadcrumbs back)
             currently_visiting = currently_visiting.breadcrumb
-
-        vertex_a.hops_cache_set(vertex_b, hops)
 
         assert vertex_a not in hops and vertex_b not in hops, \
                "neither start nor destination node should be returned"
