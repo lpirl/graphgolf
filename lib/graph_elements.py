@@ -48,13 +48,6 @@ class Vertex(object):
         Tests show, that using tuples in the cache is a tiny bit faster.
         """
 
-        self.dirty = False
-        """
-        If our ``edges_to`` have been modified but the ``hops_cache``s
-        of the other vertices have not been invalidated/updated, this is
-        ``True``. Used to defer cache invalidation.
-        """
-
     __hash__ = object.__hash__
     """
     We explicitly re-use ``object``'s ``__hash__`` here, since it is
@@ -106,7 +99,11 @@ class Vertex(object):
         if self < other:
             return self._hops_cache.get(other, None)
         else:
-            return reversed(other._hops_cache.get(self, None))
+            cached_hops = other._hops_cache.get(self, None)
+            if cached_hops is None:
+                return None
+            else:
+                return tuple(reversed(cached_hops))
 
     def hops_cache_set(self, other, hops):
         """
@@ -301,8 +298,6 @@ class GolfGraph(object):
         vertex_a.edges_to.append(vertex_b)
         vertex_b.edges_to.append(vertex_a)
         self._dirty = True
-        vertex_a.dirty = True
-        vertex_b.dirty = True
         assert len(vertex_a.edges_to) <= self.degree
         assert len(vertex_b.edges_to) <= self.degree
 
@@ -318,8 +313,6 @@ class GolfGraph(object):
         assert vertex_a != vertex_b, "vertex should not have edge to itself"
         vertex_a.edges_to.remove(vertex_b)
         vertex_b.edges_to.remove(vertex_a)
-        vertex_a.dirty = True
-        vertex_b.dirty = True
         self._dirty = True
 
     def add_as_many_random_edges_as_possible(self, limit_to_vertices=None):
@@ -436,14 +429,11 @@ class GolfGraph(object):
         assert vertex_a != vertex_b, \
                "won't search hops between a vertex and itself..."
 
-        assert vertex_a.dirty is False, "cannot search hops: vertex A dirty"
-        assert vertex_b.dirty is False, "cannot search hops: vertex B dirty"
-
         # check if we can serve the request from the cache
-        cache_entry = vertex_a.hops_cache_get(vertex_b)
-        if cache_entry is not None:
+        cached_hops = vertex_a.hops_cache_get(vertex_b)
+        if cached_hops is not None:
             debug("hops cache hit")
-            return cache_entry
+            return cached_hops
 
         # ``list`` because this must be ordered
         # (to not descend accidentally while doing breadth-first search):
@@ -458,9 +448,6 @@ class GolfGraph(object):
         currently_visiting = None
         while currently_enqueued:
             currently_visiting = currently_enqueued.popleft()
-
-            assert currently_visiting.dirty is False, \
-                   "visited a dirty vertex while searching hops"
 
             # check if we arrived at the target vertex
             if currently_visiting == vertex_b:
@@ -491,7 +478,7 @@ class GolfGraph(object):
         # loop until we arrive at the start vertex (and skip it as well)
         while currently_visiting != vertex_a:
 
-            # fill the hops cache (smaller ID to larger ID only):
+            # fill the hops cache:
             if not currently_visiting.hops_cache_has(vertex_b):
                 currently_visiting.hops_cache_set(vertex_b, tuple(hops))
 
@@ -616,8 +603,6 @@ class GolfGraph(object):
                 dup_vertex._hops_cache[dup.vertices[target.id]] = \
                     tuple(dup.vertices[hop.id] for hop in hops)
 
-            dup_vertex.dirty = self_vertex.dirty
-
         # copy analysis data
         dup.diameter = self.diameter
         dup.aspl = self.aspl
@@ -655,6 +640,14 @@ class GolfGraph(object):
         Namely, this invalidates internally cached values.
 
         This is quite expensive. Consider wisely when calling this.
+
+        Note: there was complicated code before where vertices were
+        marked as dirty and the hops caches were reset selectively. The
+        code was buggy. When thinking in more detail about this, it
+        turned out, that there are cases where selectively clearing
+        hops caches is not enough. Consequently, we switch back to the
+        approach "just require to clear all hops caches after the graph
+        has been modified."
         """
         assert self._dirty, "no vertices modified"
 
@@ -662,55 +655,9 @@ class GolfGraph(object):
         self.aspl = None
         self.diameter = None
 
-        # We look into the hops caches of all vertices. If we find a
-        # modified vertex as target or as hop, we drop that cache item.
-
-        # loop over all vertices (we have to check *all* the caches):
         for vertex in self.vertices:
+            vertex.hops_cache_clear()
 
-            # drop the whole cache if this vertex is dirty
-            if vertex.dirty:
-                vertex.hops_cache_clear()
-                continue
-
-            # if this vertex is clean, invalidated only cache entries
-            # that relate to a dirty vertex
-
-            # this is where we store what to invalidate later on:
-            # (this pattern avoids copying the hops cache, what would
-            # be necessary to modify it while iterating over its elements)
-            keys_to_invalidate = set()
-
-            # loop over all cache entries of that vertex:
-            for target, hops in vertex.hops_cache_items():
-
-                # just double-check we have to references to vertices of
-                # a graph this one was duplicated from
-                assert target in self.vertices
-
-                # check if the target of that cache entry is a modified
-                # vertex
-                if target.dirty:
-                    keys_to_invalidate.add(target)
-                    break
-
-                # check if a modified vertex is within the hops
-                for hop in hops:
-
-                    # again, double-check we have no old references here
-                    assert hop in self.vertices
-
-                    if hop.dirty:
-                        keys_to_invalidate.add(target)
-                        break
-
-            # now actually clear items from the vertex' cache
-            for key_to_invalidate in keys_to_invalidate:
-                vertex.hops_cache_unset(key_to_invalidate)
-
-        # reset dirty flags
-        for vertex in self.vertices:
-            vertex.dirty = False
         self._dirty = False
 
     def __lt__(self, other):
@@ -722,8 +669,8 @@ class GolfGraph(object):
         assert self.order == other.order
         assert self.degree == other.degree
         assert self.diameter is not None
-        assert self.aspl is not None
         assert other.diameter is not None
+        assert self.aspl is not None
         assert other.aspl is not None
         assert self._dirty is False
         assert other._dirty is False
@@ -749,8 +696,6 @@ class GolfGraph(object):
         # this iterable will be empty.
         if self._dirty:
             self.clean()
-        assert max(v.dirty for v in self.vertices) is False, \
-               "not all vertices clean"
 
         debug("collecting all attributes but vertices")
         state = {k: v
@@ -801,9 +746,6 @@ class GolfGraph(object):
                 vertices[dest_id]: tuple(vertices[hop_id] for hop_id in hop_ids)
                 for dest_id, hop_ids in hops_cache.items()
             }
-            # we made sure we ``__getstate__``ed a clean graph,
-            # so we can do:
-            vertex.dirty = False
 
         debug("restoring remaining attributes")
         for key, value in state.items():
