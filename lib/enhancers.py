@@ -197,8 +197,7 @@ class AbstractBase(object):
 
         # find longest paths and remember them
         for vertex_a, vertex_b in combinations(graph.vertices, 2):
-            hops = graph.hops(vertex_a, vertex_b)
-            hops_count = len(hops)
+            hops_count = len(graph.hops(vertex_a, vertex_b))
             if hops_count == hops_count_max:
                 longest_paths.append((vertex_a, vertex_b))
             elif hops_count > hops_count_max:
@@ -303,14 +302,20 @@ class RandomlyRelinkMostDistantInTooLongPaths(AbstractRandomlyRelinkVertices):
         (i.e., source and destination of "too long" paths).
         """
 
+        assert not graph.dirty
         if graph.diameter_lower_bound is None:
             graph.analyze()
 
-        for vertex_a, vertex_b in combinations(graph.vertices, 2):
-            hops = graph.hops(vertex_a, vertex_b)
-            if len(hops)+1 > graph.diameter_lower_bound:
-                yield vertex_a
-                yield vertex_b
+        # we pre-compute the vertices to consider (instead of yielding
+        # them lazily) so that we don't have to ``clean()`` the graph
+        # constantly
+        return set(
+            chain.from_iterable(
+                (a, b,)
+                for a, b in combinations(graph.vertices, 2)
+                if graph.hops_count(a, b) > graph.diameter_lower_bound
+            )
+        )
 
 
 
@@ -326,16 +331,23 @@ class RandomlyRelinkAllInTooLongPaths(AbstractRandomlyRelinkVertices):
         (i.e., source and destination of "too long" paths).
         """
 
+        assert not graph.dirty
         if graph.diameter_lower_bound is None:
             graph.analyze()
 
-        for vertex_a, vertex_b in combinations(graph.vertices, 2):
-            hops = graph.hops(vertex_a, vertex_b)
-            if len(hops)+1 > graph.diameter_lower_bound:
-                yield vertex_a
-                for hop in hops:
-                    yield hop
-                yield vertex_b
+        # we collect the vertices to consider in advance (instead of
+        # yielding them lazily) so that we don't have to ``clean()`` the
+        # graph constantly
+        from_to_hops = tuple((a, b, graph.hops(a, b))
+                             for a, b in combinations(graph.vertices, 2))
+
+        return set(
+            chain.from_iterable(
+                (a, b,) + hops
+                for a, b, hops in from_to_hops
+                if len(hops)+1 > graph.diameter_lower_bound
+            )
+        )
 
 
 

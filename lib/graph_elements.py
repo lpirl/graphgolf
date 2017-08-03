@@ -423,8 +423,8 @@ class GolfGraph(object):
         debug("searching shortest path between %s and %s", vertex_a,
               vertex_b)
 
-        if self._dirty:
-            self.clean()
+        assert not self.dirty, "since cleaning the graph is expensive, " \
+               "it has to happen explicitly"
 
         assert vertex_a != vertex_b, \
                "won't search hops between a vertex and itself..."
@@ -634,7 +634,7 @@ class GolfGraph(object):
         return True
 
     @property
-    def dity(self):
+    def dirty(self):
         """ Read-only property. Use ``clean()`` to set to ``False``. """
         return self._dirty
 
