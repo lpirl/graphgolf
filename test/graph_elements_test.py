@@ -1,4 +1,4 @@
-from itertools import permutations
+from itertools import permutations, combinations
 from copy import deepcopy
 from pickle import loads, dumps
 
@@ -138,6 +138,7 @@ class GolfGraphTest(BaseTest):
         """
         graph = GolfGraph(2, 2)
         graph.add_as_many_random_edges_as_possible()
+        graph.clean()
         self.assertEqual(tuple(), graph.hops(*graph.vertices))
 
     def test_hops_line(self):
@@ -145,6 +146,7 @@ class GolfGraphTest(BaseTest):
         Asserts shortest path computation for a 'line graph' with 3 vertices.
         """
         graph = self.line_graph()
+        graph.clean()
         vertices = graph.vertices
         self.assertEqual(tuple(), graph.hops(vertices[0], vertices[1]))
         self.assertEqual(tuple(), graph.hops(vertices[1], vertices[2]))
@@ -156,6 +158,7 @@ class GolfGraphTest(BaseTest):
         Asserts shortest path computation for a 'triangle graph'.
         """
         graph = self.triangle_graph()
+        graph.clean()
 
         for edge in permutations(graph.vertices, 2):
             self.assertEqual(tuple(), tuple(graph.hops(*edge)))
@@ -228,6 +231,7 @@ class GolfGraphTest(BaseTest):
         graph = self.rectangle_graph()
         vertices = graph.vertices
         graph.remove_edge_unsafe(vertices[0], vertices[-1])
+        graph.clean()
         self.assertEqual(tuple(vertices[1:-1]),
                          graph.hops(vertices[0], vertices[-1]))
 
@@ -244,9 +248,9 @@ class GolfGraphTest(BaseTest):
 
         # check that the hops caches do not point to the old graph's
         # vertices
-        for (target_a, hops_a), (target_b, hops_b) in zip(
-                vertex_a0.hops_cache_items(), vertex_b0.hops_cache_items()):
-            self.assertNotEqual(id(target_a), id(target_b))
+        for vertex_a, vertex_b in combinations(graph_a.vertices, 2):
+            hops_a = graph_a.hops_cache.get(vertex_a, vertex_b)
+            hops_b = graph_b.hops_cache.get(vertex_a, vertex_b)
             for hop_a, hop_b in zip(hops_a, hops_b):
                 self.assertNotEqual(id(hop_a), id(hop_b))
 
@@ -320,14 +324,11 @@ class GolfGraphTest(BaseTest):
                     )
 
                     # compare hops caches
-                    for vertex_a, vertex_b in zip(edge_a, edge_b):
-                        for cache_a, cache_b in zip(vertex_a.hops_cache_items(),
-                                                      vertex_b.hops_cache_items()):
-                            target_a, hops_a = cache_a
-                            target_b, hops_b = cache_b
-                            self.assertEqual(target_a.id, target_b.id)
-                            for hop_a, hop_b in zip(hops_a, hops_b):
-                                self.assertEqual(hop_a.id, hop_b.id)
+                    for vertex_a, vertex_b in combinations(graph.vertices, 2):
+                        hops_a = graph.hops_cache.get(vertex_a, vertex_b)
+                        hops_b = unpickled.hops_cache.get(vertex_a, vertex_b)
+                        for hop_a, hop_b in zip(hops_a, hops_b):
+                            self.assertEqual(hop_a.id, hop_b.id)
 
                 unpickled.analyze()
 
@@ -393,14 +394,3 @@ class GolfGraphTest(BaseTest):
                                        graph_b.vertices[1])
             graph_b.analyze()
             self.assertTrue(graph_a < graph_b)
-
-    def test_hops_caches_only_forward(self):
-        """
-        Tests whether we have only "smaller ID to larger ID" entries in
-        the hops caches of vertices:
-        """
-        for graph in self.some_valid_graphs():
-            graph.analyze()
-            for vertex in graph.vertices:
-                for target, _ in vertex.hops_cache_items():
-                    self.assertTrue(vertex < target)
