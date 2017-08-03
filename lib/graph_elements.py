@@ -387,8 +387,8 @@ class GolfGraph(object):
 
         # follow back the breadcrumbs and remember the hops taken
         # (excluding departure and destination)
-        # note: because we copy this list to the vertices we visit,
-        # using lists here is slightly faster than, e.g., a deque
+        # note: probably because we copy this list to the vertices we
+        # visit, using lists here is slightly faster than, e.g., a deque
         hops = []
 
         # skip the target vertex (should not appear in returned hops list)
