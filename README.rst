@@ -13,6 +13,10 @@ concepts for performance
     * do invariant and sanity checks using ``assert`` statements
 
       * so we can easily skip them with the "-O" option
+      * also, we skip some debug statements using
+        ``assert None is debug(...)``
+
+        * nasty, sorry
 
     * classes/instances do only what is inherently needed
 

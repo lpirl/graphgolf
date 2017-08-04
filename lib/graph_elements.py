@@ -6,7 +6,7 @@ from logging import debug, warning
 from itertools import combinations
 from random import shuffle
 from collections import deque
-from statistics import mean, median
+from statistics import median
 
 from lib.hops_cache import HopsCache
 
@@ -215,10 +215,10 @@ class GolfGraph(object):
 
         Called often, keep minimal.
         """
+        assert None is debug("wiring %s and %s", vertex_a, vertex_b)
         assert vertex_a in self.vertices
         assert vertex_b in self.vertices
         assert vertex_a != vertex_b
-        debug("wiring %s and %s", vertex_a, vertex_b)
         vertex_a.edges_to.append(vertex_b)
         vertex_b.edges_to.append(vertex_a)
         self._dirty = True
@@ -231,7 +231,7 @@ class GolfGraph(object):
 
         Called often, keep minimal.
         """
-        debug("de-wiring %s and %s", vertex_a, vertex_b)
+        assert None is debug("de-wiring %s and %s", vertex_a, vertex_b)
         assert vertex_a in self.vertices
         assert vertex_b in self.vertices
         assert vertex_a != vertex_b, "vertex should not have edge to itself"
@@ -286,7 +286,7 @@ class GolfGraph(object):
 
                 # honor degree at vertex a
                 if len(vertex_a.edges_to) == degree:
-                    debug("no ports left")
+                    assert None is debug("no ports left")
                     try:
                         # The vertex might be removed already, if it was
                         # found as a "vertex_b" with no ports left.
@@ -308,7 +308,9 @@ class GolfGraph(object):
 
                     # honor degree at vertex b
                     if len(vertex_b.edges_to) == degree:
-                        debug("vertex b (%s) has no ports left", vertex_b)
+                        assert None is debug(
+                            "vertex b (%s) has no ports left", vertex_b
+                        )
                         overall_vertices.remove(vertex_b)
                         current_vertices.pop(vertex_b_i)
                         continue
@@ -316,7 +318,9 @@ class GolfGraph(object):
 
                     # do not add edges_to that already exist
                     if vertex_b in vertex_a.edges_to:
-                        debug("vertex b (%s) already connected", vertex_b)
+                        assert None is debug(
+                            "vertex b (%s) already connected", vertex_b
+                        )
                         vertex_b_i += 1
                         continue
 
@@ -344,8 +348,8 @@ class GolfGraph(object):
 
         Called very often, keep efficient.
         """
-        debug("searching shortest path between %s and %s", vertex_a,
-              vertex_b)
+        assert None is debug("searching shortest path between %s and %s",
+                             vertex_a, vertex_b)
 
         assert not self._dirty, "cleaning the graph is expensive, " \
                "it has to happen explicitly"
@@ -356,7 +360,7 @@ class GolfGraph(object):
         # check if we can serve the request from the cache
         cached_hops = self.hops_cache.get(vertex_a, vertex_b)
         if cached_hops is not None:
-            debug("hops cache hit")
+            assert None is debug("hops cache hit")
             return cached_hops
 
         # ``list`` because this must be ordered
@@ -459,12 +463,12 @@ class GolfGraph(object):
         2 * (a + b + ...) / 2[count] ==
         (a + b + ...) / [count]
         """
-        debug("analyzing graph")
+        assert None is debug("analyzing graph")
 
         assert self.vertices, "cannot analyze graph w/o vertices"
         assert self._dirty, "already analyzed"
 
-        debug("cleaning analysis data")
+        assert None is debug("cleaning analysis data")
         self.hops_cache.clear()
         self._dirty = False
 

@@ -1,3 +1,6 @@
+"""
+See ``HopsCace``.
+"""
 
 class HopsCache(object):
     """
@@ -26,50 +29,57 @@ class HopsCache(object):
         the second one ``order-2`` and so on.
         """
 
-    def get(self, a, b):
+    def get(self, vertex_a, vertex_b):
         """
-        Returns hops cache entry between ``a`` and ``b`` or ``None``.
+        Returns hops cache entry between ``vertex_a`` and ``vertex_b``
+        or ``None``.
         """
-        assert a != b
-        if a < b:
-            return self._data[a.id][b.id - a.id - 1]
+        assert vertex_a != vertex_b
+        if vertex_a < vertex_b:
+            return self._data[vertex_a.id][vertex_b.id - vertex_a.id - 1]
         else:
-            hops = self._data[b.id][a.id - b.id - 1]
+            hops = self._data[vertex_b.id][vertex_a.id - vertex_b.id - 1]
             if hops is None:
                 return None
             return tuple(reversed(hops))
 
-    def set(self, a, b, hops):
+    def set(self, vertex_a, vertex_b, hops):
         """
-        Sets hops cache entry between ``a`` and ``b``.
+        Sets hops cache entry between ``vertex_a`` and ``vertex_b``.
         """
-        assert a != b
-        if a < b:
-            assert self._data[a.id][b.id - a.id - 1] is None, \
+        assert vertex_a != vertex_b
+        if vertex_a < vertex_b:
+            assert self._data[vertex_a.id][vertex_b.id - vertex_a.id - 1] \
+                   is None, \
                    "please check why you overwrite this cache entry " \
                    "and clear it manually before, if this is really what " \
                    "you want to do (we usually do not need this)"
-            self._data[a.id][b.id - a.id - 1] = hops
+            self._data[vertex_a.id][vertex_b.id - vertex_a.id - 1] = hops
         else:
-            assert self._data[b.id][a.id - b.id - 1] is None, \
+            assert self._data[vertex_b.id][vertex_a.id - vertex_b.id - 1] \
+                   is None, \
                    "please check why you overwrite this cache entry " \
                    "and clear it manually before, if this is really what " \
                    "you want to do (we usually do not need this)"
-            self._data[b.id][a.id - b.id - 1] = tuple(reversed(hops))
+            self._data[vertex_b.id][vertex_a.id - vertex_b.id - 1] = tuple(
+                reversed(hops)
+            )
 
-    def unset(self, a, b):
+    def unset(self, vertex_a, vertex_b):
         """
-        Removes cache entry for hops between ``a`` and ``b``.
+        Removes cache entry for hops between ``vertex_a`` and
+        ``vertex_b``.
         """
-        assert a != b
-        if b < a:
-            a, b = b, a
+        assert vertex_a != vertex_b
+        if vertex_b < vertex_a:
+            vertex_a, vertex_b = vertex_b, vertex_a
 
-        assert self._data[a.id][b.id - a.id - 1] is not None, \
+        assert self._data[vertex_a.id][vertex_b.id - vertex_a.id - 1] \
+               is not None, \
                    "please check why you double-unset this cache entry " \
                    "and clear it manually before, if this is really what " \
                    "you want to do (we usually do not need this)"
-        self._data[a.id][b.id - a.id - 1] = None
+        self._data[vertex_a.id][vertex_b.id - vertex_a.id - 1] = None
 
     def clear(self):
         """ Drops all cache entries. """
