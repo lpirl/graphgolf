@@ -6,6 +6,7 @@ from logging import debug, warning
 from itertools import combinations
 from random import shuffle
 from collections import deque
+from statistics import mean, median
 
 from lib.hops_cache import HopsCache
 
@@ -100,15 +101,19 @@ class GolfGraph(object):
         self._diameter_lower_bound = None
 
         # to be filled by ``self.analyze()``
-        self.diameter = None
-        self.aspl = None
+        self._shortest_path_lengths = None
+        self._diameter = None
+        self._aspl = None
+        self._mspl = None
+
+        # If edges modified and vertices' hops caches need to be updated.
+        # Although it might look a bit funny to initialize ``self`` dirty,
+        # we lack analysis data yet, that's why.
+        self._dirty = True
 
         # ``list`` because needs fast iteration
         # tests showed, that using tuples here is a tiny bit slower
         self.vertices = [Vertex(i) for i in range(order)]
-
-        # if edges modified and vertices' hops caches need to be updated
-        self._dirty = False
 
         self.hops_cache = HopsCache(order)
 
@@ -341,7 +346,7 @@ class GolfGraph(object):
         debug("searching shortest path between %s and %s", vertex_a,
               vertex_b)
 
-        assert not self.dirty, "since cleaning the graph is expensive, " \
+        assert not self._dirty, "cleaning the graph is expensive, " \
                "it has to happen explicitly"
 
         assert vertex_a != vertex_b, \
@@ -455,27 +460,58 @@ class GolfGraph(object):
         """
         debug("analyzing graph")
 
-        assert bool(self.vertices), "cannot analyze graph w/o vertices"
+        assert self.vertices, "cannot analyze graph w/o vertices"
+        assert self._dirty, "already analyzed"
 
-        if self._dirty:
-            self.clean()
+        debug("cleaning analysis data")
+        self.hops_cache.clear()
+        self._diameter = None
+        self._aspl = None
+        self._mspl = None
+        self._dirty = False
 
-        longest_shortest_path = -1
-        lengths_sum = 0
-        lengths_count = 0
+        self._shortest_path_lengths = tuple(
+            self.hops_count(vertex_a, vertex_b)
+            for vertex_a, vertex_b in combinations(self.vertices, 2)
+        )
 
-        for vertex_a, vertex_b in combinations(self.vertices, 2):
-            length = self.hops_count(vertex_a, vertex_b)
-            if longest_shortest_path < length:
-                longest_shortest_path = length
-            lengths_sum += length
-            lengths_count += 1
+        # to avoid iterating over the path lengths twice - once to find
+        # the maximum, another time to compute the average - we calculate
+        # by hand in the following loop
+        #~ longest_shortest_path = -1
+        #~ lengths_sum = 0
+        #~ lengths_count = 0
+        #~ for length in shortest_path_lengths:
+            #~ lengths_sum += length
+            #~ lengths_count += 1
+            #~ if length > longest_shortest_path:
+                #~ longest_shortest_path = length
 
-        assert lengths_sum > 0, "is this graph unconnected?"
-        assert lengths_count > 0, "is this graph unconnected?"
+    @property
+    def diameter(self):
+        """ Lazily calculates the diameter shortest path length. """
+        assert not self._dirty
+        #~ if self._diameter is None:
+            #~ self._diameter = max(self._shortest_path_lengths)
+        return max(self._shortest_path_lengths)
+        return self._diameter
 
-        self.diameter = longest_shortest_path
-        self.aspl = lengths_sum/lengths_count
+    @property
+    def aspl(self):
+        """ Lazily calculates the average shortest path length. """
+        assert not self._dirty
+        #~ if self._aspl is None:
+            #~ self._aspl = mean(self._shortest_path_lengths)
+        return mean(self._shortest_path_lengths)
+        return self._aspl
+
+    @property
+    def mspl(self):
+        """ Lazily calculates the median shortest path length. """
+        assert not self._dirty
+        #~ if self._mspl is None:
+        return median(self._shortest_path_lengths)
+        return self._mspl
 
     def edges(self):
         """
@@ -513,8 +549,10 @@ class GolfGraph(object):
         dup.hops_cache.set_from_ids(self.hops_cache.ids(), dup.vertices)
 
         # copy analysis data
-        dup.diameter = self.diameter
-        dup.aspl = self.aspl
+        dup._shortest_path_lengths = self._shortest_path_lengths
+        dup._diameter = self._diameter
+        dup._aspl = self._aspl
+        dup._mspl = self._mspl
         dup._dirty = self._dirty
 
         return dup
@@ -524,8 +562,7 @@ class GolfGraph(object):
         Returns whether this graph is ideal, with respect to its diameter
         and its average shortest path length.
         """
-        if self.diameter is None or self.aspl is None:
-            self.analyze()
+        assert not self._dirty
 
         if self.diameter > self.diameter_lower_bound:
             return False
@@ -542,51 +579,25 @@ class GolfGraph(object):
         """ Read-only property. Use ``clean()`` to set to ``False``. """
         return self._dirty
 
-    def clean(self):
-        """
-        Does everything to get graphs dirty flag back to clean.
-
-        Namely, this invalidates internally cached values.
-
-        This is quite expensive. Consider wisely when calling this.
-
-        Note: there was complicated code before where vertices were
-        marked as dirty and the hops caches were reset selectively. The
-        code was buggy. When thinking in more detail about this, it
-        turned out, that there are cases where selectively clearing
-        hops caches is not enough. Consequently, we switch back to the
-        approach "just require to clear all hops caches after the graph
-        has been modified."
-        """
-        assert self._dirty, "no vertices modified"
-
-        debug("invalidating hops caches")
-        self.aspl = None
-        self.diameter = None
-
-        self.hops_cache.clear()
-
-        self._dirty = False
-
     def __lt__(self, other):
         """
         Returns ``True`` if this graph is better than the ``other``.
         "Better" means, that the diameter or the average shortest path
         length is lower.
         """
-        assert self.order == other.order
-        assert self.degree == other.degree
-        assert self.diameter is not None
-        assert other.diameter is not None
-        assert self.aspl is not None
-        assert other.aspl is not None
-        assert self._dirty is False
-        assert other._dirty is False
+        assert not self._dirty
+        assert not other._dirty
         if self.diameter > other.diameter:
             return False
         if self.diameter < other.diameter:
             return True
-        return self.aspl < other.aspl
+        assert self.diameter == other.diameter
+        if self.aspl > other.aspl:
+            return False
+        if self.aspl < other.aspl:
+            return True
+        assert self.aspl == other.aspl
+        return self.mspl < other.mspl
 
     def __getstate__(self):
         """
@@ -602,8 +613,8 @@ class GolfGraph(object):
         # We do not want to transform the iterable of modified vertices to
         # an iterable of IDs. After invalidating the corresponding caches,
         # this iterable will be empty.
-        if self._dirty:
-            self.clean()
+        assert self._shortest_path_lengths is not None, \
+               "please analyze the graph before pickling it"
 
         debug("collecting all attributes but vertices")
         state = {k: v

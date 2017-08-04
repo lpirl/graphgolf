@@ -120,6 +120,8 @@ class AbstractBase(object):
                 # get a modified graph
                 try:
                     current_graph = self.modify_graph(current_graph)
+                    if current_graph.dirty:
+                        current_graph.analyze()
                 except GraphPartitionedError:
                     debug("graph partitioned")
                     continue
@@ -128,11 +130,6 @@ class AbstractBase(object):
                     warning("%s did not return a graph", self.__class__.__name__)
                     return
 
-                # analyze
-                try:
-                    current_graph.analyze()
-                except GraphPartitionedError:
-                    continue
                 if current_graph < best_graph:
                     info("%s found %s", self.__class__.__name__, current_graph)
                     report_queue.put(current_graph)
@@ -140,7 +137,7 @@ class AbstractBase(object):
 
     def modify_graph(self, graph):
         """
-        Modifies and returns ``graph`` - possibly **IN PLACE**.
+        Modifies and returns a (possibly in place) modified ``graph``.
         """
         raise NotImplementedError("subclass responsibility")
 

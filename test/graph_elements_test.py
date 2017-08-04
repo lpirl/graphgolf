@@ -138,7 +138,7 @@ class GolfGraphTest(BaseTest):
         """
         graph = GolfGraph(2, 2)
         graph.add_as_many_random_edges_as_possible()
-        graph.clean()
+        graph.analyze()
         self.assertEqual(tuple(), graph.hops(*graph.vertices))
 
     def test_hops_line(self):
@@ -146,7 +146,7 @@ class GolfGraphTest(BaseTest):
         Asserts shortest path computation for a 'line graph' with 3 vertices.
         """
         graph = self.line_graph()
-        graph.clean()
+        graph.analyze()
         vertices = graph.vertices
         self.assertEqual(tuple(), graph.hops(vertices[0], vertices[1]))
         self.assertEqual(tuple(), graph.hops(vertices[1], vertices[2]))
@@ -158,7 +158,7 @@ class GolfGraphTest(BaseTest):
         Asserts shortest path computation for a 'triangle graph'.
         """
         graph = self.triangle_graph()
-        graph.clean()
+        graph.analyze()
 
         for edge in permutations(graph.vertices, 2):
             self.assertEqual(tuple(), tuple(graph.hops(*edge)))
@@ -231,7 +231,7 @@ class GolfGraphTest(BaseTest):
         graph = self.rectangle_graph()
         vertices = graph.vertices
         graph.remove_edge_unsafe(vertices[0], vertices[-1])
-        graph.clean()
+        graph.analyze()
         self.assertEqual(tuple(vertices[1:-1]),
                          graph.hops(vertices[0], vertices[-1]))
 
@@ -281,6 +281,7 @@ class GolfGraphTest(BaseTest):
         # is the smallest graph supported.
 
         graph = self.rectangle_graph()
+        graph.analyze()
         self.assertTrue(graph.ideal())
         graph.remove_edge_unsafe(graph.vertices[1], graph.vertices[2])
         graph.analyze()
@@ -330,7 +331,9 @@ class GolfGraphTest(BaseTest):
                         for hop_a, hop_b in zip(hops_a, hops_b):
                             self.assertEqual(hop_a.id, hop_b.id)
 
-                unpickled.analyze()
+                    self.assertEqual(graph.diameter, unpickled.diameter)
+                    self.assertEqual(graph.aspl, unpickled.aspl)
+                    self.assertEqual(graph.mspl, unpickled.mspl)
 
     def test_hops_cache_reverse_lookup(self):
         """
