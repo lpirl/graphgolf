@@ -101,10 +101,11 @@ class GolfGraph(object):
         self._diameter_lower_bound = None
 
         # to be filled by ``self.analyze()``
-        self._shortest_path_lengths = None
-        self._diameter = None
-        self._aspl = None
-        self._mspl = None
+        # note on performance: making the below lazy (even just the
+        # probably less used mspl) actually lowers the performance
+        self.diameter = None
+        self.aspl = None
+        self.mspl = None
 
         # If edges modified and vertices' hops caches need to be updated.
         # Although it might look a bit funny to initialize ``self`` dirty,
@@ -465,12 +466,9 @@ class GolfGraph(object):
 
         debug("cleaning analysis data")
         self.hops_cache.clear()
-        self._diameter = None
-        self._aspl = None
-        self._mspl = None
         self._dirty = False
 
-        self._shortest_path_lengths = tuple(
+        _shortest_path_lengths = tuple(
             self.hops_count(vertex_a, vertex_b)
             for vertex_a, vertex_b in combinations(self.vertices, 2)
         )
@@ -478,40 +476,18 @@ class GolfGraph(object):
         # to avoid iterating over the path lengths twice - once to find
         # the maximum, another time to compute the average - we calculate
         # by hand in the following loop
-        #~ longest_shortest_path = -1
-        #~ lengths_sum = 0
-        #~ lengths_count = 0
-        #~ for length in shortest_path_lengths:
-            #~ lengths_sum += length
-            #~ lengths_count += 1
-            #~ if length > longest_shortest_path:
-                #~ longest_shortest_path = length
+        longest_shortest_path = -1
+        lengths_sum = 0
+        lengths_count = 0
+        for length in _shortest_path_lengths:
+            lengths_sum += length
+            lengths_count += 1
+            if length > longest_shortest_path:
+                longest_shortest_path = length
 
-    @property
-    def diameter(self):
-        """ Lazily calculates the diameter shortest path length. """
-        assert not self._dirty
-        #~ if self._diameter is None:
-            #~ self._diameter = max(self._shortest_path_lengths)
-        return max(self._shortest_path_lengths)
-        return self._diameter
-
-    @property
-    def aspl(self):
-        """ Lazily calculates the average shortest path length. """
-        assert not self._dirty
-        #~ if self._aspl is None:
-            #~ self._aspl = mean(self._shortest_path_lengths)
-        return mean(self._shortest_path_lengths)
-        return self._aspl
-
-    @property
-    def mspl(self):
-        """ Lazily calculates the median shortest path length. """
-        assert not self._dirty
-        #~ if self._mspl is None:
-        return median(self._shortest_path_lengths)
-        return self._mspl
+        self.aspl = lengths_sum/lengths_count
+        self.diameter = longest_shortest_path
+        self.mspl = median(_shortest_path_lengths)
 
     def edges(self):
         """
@@ -549,10 +525,9 @@ class GolfGraph(object):
         dup.hops_cache.set_from_ids(self.hops_cache.ids(), dup.vertices)
 
         # copy analysis data
-        dup._shortest_path_lengths = self._shortest_path_lengths
-        dup._diameter = self._diameter
-        dup._aspl = self._aspl
-        dup._mspl = self._mspl
+        dup.diameter = self.diameter
+        dup.aspl = self.aspl
+        dup.mspl = self.mspl
         dup._dirty = self._dirty
 
         return dup
@@ -613,7 +588,7 @@ class GolfGraph(object):
         # We do not want to transform the iterable of modified vertices to
         # an iterable of IDs. After invalidating the corresponding caches,
         # this iterable will be empty.
-        assert self._shortest_path_lengths is not None, \
+        assert not self._dirty, \
                "please analyze the graph before pickling it"
 
         debug("collecting all attributes but vertices")
