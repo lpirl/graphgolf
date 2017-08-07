@@ -32,7 +32,7 @@ class Vertex(object):
         path they went but didn't remember).
         """
 
-        self.edges_to = list()
+        self.edges_to = deque()
         """
         The main data structure to represent edges.
         This list contains vertices this vertex has edges to.
