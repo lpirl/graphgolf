@@ -114,7 +114,8 @@ class HopsCache(object):
 
     def set_from_ids(self, ids, vertices):
         """
-        "Reverse" of ``ids()``.
+        Fills own data structures in accordance with a previous return
+        value of ``ids()``.
         """
 
         assert len(ids) + 1 == len(vertices)
