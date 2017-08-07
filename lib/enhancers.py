@@ -63,13 +63,13 @@ class AbstractBase(object):
     Number of modifications to apply to graph before throwing the
     modified graph away and start again with the best graph known.
 
-    If ``None``, we'll use ``order*degree``.
+    If ``None``, we'll start with one, double the value every
+    ``order/degree`` times, but won't go beyond ``order*degree``.
     """
 
     def __init__(self, arg_parser):
         self.arg_parser = arg_parser
         self.args = None
-
 
         self.active = True
         """
@@ -97,7 +97,7 @@ class AbstractBase(object):
         Tries to enhance a graph; possibly **IN PLACE**.
         Puts an enhanced graph into the ``report_queue``, when found.
         """
-        info("enhancer %s started", self.__class__.__name__)
+        debug("enhancer %s started", self.__class__.__name__)
 
         assert best_graph.aspl is not None and \
                best_graph.diameter is not None, "graph must be analyzed"
@@ -107,10 +107,36 @@ class AbstractBase(object):
             info("graph fully connected - no need to do anything")
             return
 
-        modifications = self.MODIFICATIONS or \
-                        int(best_graph.order*best_graph.degree)
+        increase_modifications_every = max(
+            1, best_graph.order / best_graph.degree
+        )
+        """
+        Every order/degree times we increase the number of modifications.
+        """
+
+        modifications = self.MODIFICATIONS or 1
+        """
+        Number of modifications to do before re-starting with currently
+        known best graph.
+        We set the number statically so ``self.MODIFICATIONS`` if defined,
+        or start with one modification.
+        """
+
+        modifications_wihtout_success = 0
 
         while self.active:
+
+            if self.MODIFICATIONS is None:
+                if (modifications_wihtout_success >=
+                        increase_modifications_every):
+                    modifications_wihtout_success = 0
+                    modifications = min(
+                        best_graph.order * best_graph.degree,
+                        modifications * 2
+                    )
+
+                    info("%s now allows %u modifications w/o success",
+                         self.__class__.__name__, modifications)
 
             # get a new copy of best graph to work with
             current_graph = best_graph.duplicate()
@@ -134,6 +160,8 @@ class AbstractBase(object):
                     info("%s found %s", self.__class__.__name__, current_graph)
                     report_queue.put(current_graph)
                     return
+
+                modifications_wihtout_success += 1
 
     def modify_graph(self, graph):
         """
@@ -178,7 +206,8 @@ class AbstractBase(object):
         if len(vertex.edges_to) == graph.degree:
             return self.remove_random_edge(graph, vertex)
 
-    def longest_paths(self, graph):
+    @staticmethod
+    def longest_paths(graph):
         """
         Returns tuples of (source, destination) vertices, for which one has
         to hop over ``hops_count_max`` vertices (i.e., source and destination
@@ -257,7 +286,7 @@ class RandomlyRelinkMostDistantVertices(AbstractRandomlyRelinkVertices):
 
 
 
-class ConnectMostDistantVertices(AbstractRandomlyRelinkVertices):
+class ConnectMostDistantVertices(AbstractBase):
     """
     Just like ``RandomlyRelinkMostDistantVertices`` but creates an edge
     between most distant vertices right away.

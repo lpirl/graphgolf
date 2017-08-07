@@ -9,6 +9,7 @@ from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
 from multiprocessing import Process, Manager
+from datetime import datetime
 
 from lib.enhancers import Registry as EnhancerRegistry
 from lib.graph_elements import GolfGraph
@@ -176,7 +177,7 @@ class Cli(object):
             # in case processes submitted a graph before they got killed
             while not report_queue.empty():
                 self.best_graph = min(report_queue.get(), self.best_graph)
-            print(self.best_graph)
+            print("%s: %s" % (datetime.now(), self.best_graph))
 
             if self.args.once:
                 break
