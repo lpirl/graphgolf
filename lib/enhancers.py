@@ -108,10 +108,11 @@ class AbstractBase(object):
             return
 
         increase_modifications_every = max(
-            1, best_graph.order / best_graph.degree
+            1, (best_graph.order * best_graph.degree) ** .5
         )
         """
-        Every order/degree times we increase the number of modifications.
+        Every sqrt(order*degree) times we increase the number of
+        modifications.
         """
 
         modifications = self.MODIFICATIONS or 1
@@ -122,18 +123,23 @@ class AbstractBase(object):
         or start with one modification.
         """
 
-        modifications_wihtout_success = 0
+        modifications_max = best_graph.order * best_graph.degree
+
+        modifications_current = 0
 
         while self.active:
 
             if self.MODIFICATIONS is None:
-                if (modifications_wihtout_success >=
-                        increase_modifications_every):
-                    modifications_wihtout_success = 0
-                    modifications = min(
-                        best_graph.order * best_graph.degree,
-                        modifications * 2
-                    )
+                assert modifications_current <= increase_modifications_every
+                if modifications_current == increase_modifications_every:
+                    modifications_current = 0
+                    if (modifications == modifications_max):
+                        # if we ran through with the maximum number of
+                        # modifications, start with 1 modification allowed
+                        modifications = 1
+                    else:
+                        modifications = min(modifications * 2,
+                                            modifications_max)
 
                     info("%s now allows %u modifications w/o success",
                          self.__class__.__name__, modifications)
@@ -161,7 +167,7 @@ class AbstractBase(object):
                     report_queue.put(current_graph)
                     return
 
-                modifications_wihtout_success += 1
+                modifications_current += 1
 
     def modify_graph(self, graph):
         """
@@ -430,22 +436,22 @@ class AbstractRandomlyReplacePercentageOfEdges(
 # register concrete classes
 #
 
-Registry.register_multiple(1)(ConnectMostDistantVertices)
-Registry.register_multiple(1)(RandomlyRelinkMostDistantVertices)
-Registry.register_multiple(1)(RandomlyRelinkAllInTooLongPaths)
-Registry.register_multiple(1)(RandomlyRelinkMostDistantInTooLongPaths)
+#Registry.register_multiple(1)(ConnectMostDistantVertices)
+#Registry.register_multiple(1)(RandomlyRelinkMostDistantVertices)
+#Registry.register_multiple(1)(RandomlyRelinkAllInTooLongPaths)
+Registry.register_multiple(2)(RandomlyRelinkMostDistantInTooLongPaths)
 
-@Registry.register_multiple(1)
+#@Registry.register_multiple(1)
 class RandomlyReplaceOneEdge(AbstractRandomlyReplaceRandomEdges):
     """ See ``AbstractRandomlyReplaceRandomEdges``. """
     NUMBER_OF_EDGES_TO_REPLACE = 1
 
-@Registry.register_multiple(1)
+@Registry.register_multiple(4)
 class RandomlyReplaceTwoEdges(AbstractRandomlyReplaceRandomEdges):
     """ See ``AbstractRandomlyReplaceRandomEdges``. """
     NUMBER_OF_EDGES_TO_REPLACE = 2
 
-@Registry.register_multiple(1)
+@Registry.register_multiple(2)
 class  RandomlyReplaceTenPercentEdges(
         AbstractRandomlyReplacePercentageOfEdges
 ):
