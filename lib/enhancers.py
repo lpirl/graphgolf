@@ -108,7 +108,7 @@ class AbstractBase(object):
             return
 
         increase_modifications_every = max(
-            1, (best_graph.order * best_graph.degree) ** .5
+            1, int((best_graph.order * best_graph.degree) ** .5)
         )
         """
         Every sqrt(order*degree) times we increase the number of
@@ -125,17 +125,22 @@ class AbstractBase(object):
 
         modifications_max = best_graph.order * best_graph.degree
 
-        modifications_current = 0
+        rounds_of_modifications = 0
+        """
+        How many times we unsuccessfully tried to find a better graph.
+        By "times", we mean rounds with ``modifications`` modifications
+        (i.e., ``rounds_of_modifications * modifications`` in total).
+        """
 
         while self.active:
 
             if self.MODIFICATIONS is None:
-                assert modifications_current <= increase_modifications_every
-                if modifications_current == increase_modifications_every:
-                    modifications_current = 0
+                assert rounds_of_modifications <= increase_modifications_every
+                if rounds_of_modifications == increase_modifications_every:
+                    rounds_of_modifications = 0
                     if (modifications == modifications_max):
-                        # if we ran through with the maximum number of
-                        # modifications, start with 1 modification allowed
+                        # if we tried the maximum number of modifications,
+                        # start over with only 1 modification allowed again
                         modifications = 1
                     else:
                         modifications = min(modifications * 2,
@@ -167,7 +172,7 @@ class AbstractBase(object):
                     report_queue.put(current_graph)
                     return
 
-                modifications_current += 1
+            rounds_of_modifications += 1
 
     def modify_graph(self, graph):
         """
