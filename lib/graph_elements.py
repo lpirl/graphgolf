@@ -478,7 +478,7 @@ class GolfGraph(object):
         self.hops_cache.clear()
         self._dirty = False
 
-        # if there is no previous diameter, we assume the worst diameter
+        # if there is no previous diameter, we use the worst diameter
         # possible (i.e., ``order-1``: all vertices in a line) to save a
         # comparison (i.e., if previous diameter is None) in the inner
         # loop below
@@ -490,10 +490,9 @@ class GolfGraph(object):
         self.aspl = None
         self.mspl = None
 
-        shortest_path_lengths = deque()
-
         lengths_sum = 0
         lengths_count = 0
+        shortest_path_lengths = deque()
         for vertex_a, vertex_b in combinations(self.vertices, 2):
             length = self.hops_count(vertex_a, vertex_b)
             if length > self.diameter:
