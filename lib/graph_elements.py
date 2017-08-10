@@ -447,8 +447,14 @@ class GolfGraph(object):
 
     def analyze(self):
         """
-        Sets instance attributes ``aspl`` and
-        ``diameter``.
+        Sets instance attributes ``aspl``, ``diameter`` and
+        ``mspl``.
+
+        However, if a path longer than the ``diameter`` is encountered
+        during the analysis, ``aspl`` and ``mspl`` are set to ``None``
+        (this saves analyzing the whole graph when it is clear that
+        it did not enhance). Same for ``mspl`` if the ``aspl`` is no
+        better than before.
 
         For an unconnected graph, we return all zeros or -
         if not running in optimized mode - raise an ``AssertionError``.
@@ -472,26 +478,41 @@ class GolfGraph(object):
         self.hops_cache.clear()
         self._dirty = False
 
-        _shortest_path_lengths = tuple(
-            self.hops_count(vertex_a, vertex_b)
-            for vertex_a, vertex_b in combinations(self.vertices, 2)
-        )
+        # if there is no previous diameter, we assume the worst diameter
+        # possible (i.e., ``order-1``: all vertices in a line) to save a
+        # comparison (i.e., if previous diameter is None) in the inner
+        # loop below
+        previous_diameter = self.diameter or self.order - 1
 
-        # to avoid iterating over the path lengths twice - once to find
-        # the maximum, another time to compute the average - we calculate
-        # by hand in the following loop
-        longest_shortest_path = -1
+        previous_aspl = self.aspl
+
+        self.diameter = -1
+        self.aspl = None
+        self.mspl = None
+
+        shortest_path_lengths = deque()
+
         lengths_sum = 0
         lengths_count = 0
-        for length in _shortest_path_lengths:
+        for vertex_a, vertex_b in combinations(self.vertices, 2):
+            length = self.hops_count(vertex_a, vertex_b)
+            if length > self.diameter:
+                self.diameter = length
+                if length > previous_diameter:
+                    # the diameter got worse already, no need to continue
+                    # (see also ``__lt__``)
+                    return
             lengths_sum += length
             lengths_count += 1
-            if length > longest_shortest_path:
-                longest_shortest_path = length
+            shortest_path_lengths.append(length)
 
         self.aspl = lengths_sum/lengths_count
-        self.diameter = longest_shortest_path
-        self.mspl = median(_shortest_path_lengths)
+        if previous_aspl is not None and self.aspl > previous_aspl:
+            # the aspl got worse, no need to calculate the mspl
+            # (see also ``__lt__``)
+            return
+
+        self.mspl = median(shortest_path_lengths)
 
     def edges(self):
         """
