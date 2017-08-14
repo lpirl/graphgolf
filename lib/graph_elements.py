@@ -561,22 +561,18 @@ class GolfGraph(object):
     def __lt__(self, other):
         """
         Returns ``True`` if this graph is better than the ``other``.
-        "Better" means, that the diameter or the average shortest path
-        length is lower.
+        "Better" means, improved in any quality, even though other
+        qualities might worsen.
         """
         assert not self._dirty
         assert not other._dirty
-        if self.diameter > other.diameter:
-            return False
-        if self.diameter < other.diameter:
+        if self.mspl < other.mspl:
             return True
-        assert self.diameter == other.diameter
-        if self.aspl > other.aspl:
-            return False
         if self.aspl < other.aspl:
             return True
-        assert self.aspl == other.aspl
-        return self.mspl < other.mspl
+        if self.diameter < other.diameter:
+            return True
+        return False
 
     def __getstate__(self):
         """
