@@ -293,7 +293,7 @@ class RandomlyRelinkMostDistantInTooLongPaths(AbstractRandomlyRelinkVertices):
         # we pre-compute the vertices to consider (instead of yielding
         # them lazily) so that we don't have to ``clean()`` the graph
         # constantly
-        return set(
+        most_distant_of_too_long_paths = set(
             chain.from_iterable(
                 (a, b,)
                 for a, b in combinations(graph.vertices, 2)
@@ -301,6 +301,10 @@ class RandomlyRelinkMostDistantInTooLongPaths(AbstractRandomlyRelinkVertices):
             )
         )
 
+        if len(most_distant_of_too_long_paths) == 0:
+            self.active = False
+
+        return most_distant_of_too_long_paths
 
 
 class RandomlyRelinkAllInTooLongPaths(AbstractRandomlyRelinkVertices):
@@ -325,7 +329,7 @@ class RandomlyRelinkAllInTooLongPaths(AbstractRandomlyRelinkVertices):
         from_to_hops = tuple((a, b, graph.hops(a, b))
                              for a, b in combinations(graph.vertices, 2))
 
-        return set(
+        vertices_in_too_long_paths = set(
             chain.from_iterable(
                 (a, b,) + hops
                 for a, b, hops in from_to_hops
@@ -333,6 +337,10 @@ class RandomlyRelinkAllInTooLongPaths(AbstractRandomlyRelinkVertices):
             )
         )
 
+        if len(vertices_in_too_long_paths) == 0:
+            self.active = False
+
+        return vertices_in_too_long_paths
 
 
 class AbstractRandomlyReplaceRandomEdges(AbstractRandomlyRelinkVertices):
