@@ -58,15 +58,6 @@ class AbstractBase(object):
 
     __metaclass__ = ABCMeta
 
-    MODIFICATIONS = None
-    """
-    Number of modifications to apply to graph before throwing the
-    modified graph away and start again with the best graph known.
-
-    If ``None``, we'll start with one, double the value every
-    ``order/degree`` times, but won't go beyond ``order*degree``.
-    """
-
     def __init__(self, arg_parser):
         self.arg_parser = arg_parser
         self.args = None
@@ -107,72 +98,28 @@ class AbstractBase(object):
             info("graph fully connected - no need to do anything")
             return
 
-        increase_modifications_every = max(
-            1, int((best_graph.order * best_graph.degree) ** .5)
-        )
-        """
-        Every sqrt(order*degree) times we increase the number of
-        modifications.
-        """
-
-        modifications = self.MODIFICATIONS or 1
-        """
-        Number of modifications to do before re-starting with currently
-        known best graph.
-        We set the number statically so ``self.MODIFICATIONS`` if defined,
-        or start with one modification.
-        """
-
-        modifications_max = best_graph.order * best_graph.degree
-
-        rounds_of_modifications = 0
-        """
-        How many times we unsuccessfully tried to find a better graph.
-        By "times", we mean rounds with ``modifications`` modifications
-        (i.e., ``rounds_of_modifications * modifications`` in total).
-        """
-
         while self.active:
-
-            if self.MODIFICATIONS is None:
-                assert rounds_of_modifications <= increase_modifications_every
-                if rounds_of_modifications == increase_modifications_every:
-                    rounds_of_modifications = 0
-                    if (modifications == modifications_max):
-                        # if we tried the maximum number of modifications,
-                        # start over with only 1 modification allowed again
-                        modifications = 1
-                    else:
-                        modifications = min(modifications * 2,
-                                            modifications_max)
-
-                    info("%s now allows %u modifications w/o success",
-                         self.__class__.__name__, modifications)
 
             # get a new copy of best graph to work with
             current_graph = best_graph.duplicate()
 
-            for _ in range(modifications):
+            # get a modified graph
+            try:
+                current_graph = self.modify_graph(current_graph)
+                if current_graph.dirty:
+                    current_graph.analyze()
+            except GraphPartitionedError:
+                debug("graph partitioned")
+                continue
 
-                # get a modified graph
-                try:
-                    current_graph = self.modify_graph(current_graph)
-                    if current_graph.dirty:
-                        current_graph.analyze()
-                except GraphPartitionedError:
-                    debug("graph partitioned")
-                    continue
+            if not current_graph:
+                warning("%s did not return a graph", self.__class__.__name__)
+                return
 
-                if not current_graph:
-                    warning("%s did not return a graph", self.__class__.__name__)
-                    return
-
-                if current_graph < best_graph:
-                    info("%s found %s", self.__class__.__name__, current_graph)
-                    report_queue.put(current_graph)
-                    return
-
-            rounds_of_modifications += 1
+            if current_graph < best_graph:
+                info("%s found %s", self.__class__.__name__, current_graph)
+                report_queue.put(current_graph)
+                return
 
     def modify_graph(self, graph):
         """
