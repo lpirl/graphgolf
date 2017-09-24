@@ -3,7 +3,7 @@ PY3_INTERPRETER?=pypy/bin/pypy3
 ci: test pylint
 
 pylint:
-	pylint3 woods lib test
+	pylint3 graphgolf lib test
 
 .PHONY: test
 test:
@@ -14,10 +14,10 @@ clean:
 	find -name __pycache__ -or -name '*.pyo' -or -name '*.pyc' -delete
 
 example:
-	$(PY3_INTERPRETER) woods 32 5
+	$(PY3_INTERPRETER) graphgolf 32 5
 
 profile:
-	$(PY3_INTERPRETER) -OO -m cProfile  -s calls woods 256 18
+	$(PY3_INTERPRETER) -OO -m cProfile  -s calls graphgolf 256 18
 
 pylint:
-	pylint3 woods lib
+	pylint3 graphgolf lib
