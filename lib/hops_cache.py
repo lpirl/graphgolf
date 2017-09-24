@@ -4,7 +4,7 @@ See ``HopsCace``.
 
 class HopsCache(object):
     """
-    A (for out use case) specialized data structure to store hops
+    A (for our use case) specialized data structure to store hops
     between vertices.
 
     The idea is to store the hops always in the same direction (vertex
