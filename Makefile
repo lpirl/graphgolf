@@ -1,4 +1,4 @@
-PY3_INTERPRETER?=pypy/bin/pypy3
+PYPY3?=pypy/bin/pypy3
 
 ci: test pylint
 
@@ -8,16 +8,16 @@ pylint:
 .PHONY: test
 test:
 	# no -O here!
-	$(PY3_INTERPRETER) -m unittest discover -vp "*_test.py" test
+	$(PYPY3) -m unittest discover -vp "*_test.py" test
 
 clean:
 	find -name __pycache__ -or -name '*.pyo' -or -name '*.pyc' -delete
 
 example:
-	$(PY3_INTERPRETER) graphgolf 32 5
+	$(PYPY3) graphgolf 32 5
 
 profile:
-	$(PY3_INTERPRETER) -OO -m cProfile  -s calls graphgolf 256 18
+	$(PYPY3) -OO -m cProfile  -s calls graphgolf 256 18
 
 pylint:
 	pylint3 graphgolf lib

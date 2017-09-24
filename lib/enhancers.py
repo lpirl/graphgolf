@@ -1,5 +1,3 @@
-# encoding: utf8
-
 """
 This module contains classes that enhance a graph.
 """
@@ -14,7 +12,7 @@ from lib.graph_elements import GraphPartitionedError
 
 class Registry(object):
     """
-    s register at this class.
+    Enhancer classes register at this class.
     """
 
     enhancers = list()
@@ -28,7 +26,7 @@ class Registry(object):
     @classmethod
     def register_multiple(cls, times):
         """
-        Decorator to register a class multiple times.
+        Decorator to ``register`` a class multiple times.
         """
         def _register_multiple(enhancer_cls):
             for _ in range(times):
@@ -252,7 +250,7 @@ class ConnectMostDistantVertices(AbstractBase):
 
     def modify_graph(self, graph):
         """
-        See class' docstring.MostDis
+        See class' docstring.
         """
 
         assert self.applicable_to(graph)
@@ -362,6 +360,10 @@ class AbstractRandomlyReplaceRandomEdges(AbstractRandomlyRelinkVertices):
         return self.NUMBER_OF_EDGES_TO_REPLACE
 
     def applicable_to(self, graph):
+        """
+        If the percentage yields too few edges, this enhancer is not
+        applicable.
+        """
         return (super().applicable_to(graph) and
                 self._number_of_edges_to_replace(graph) > 0)
 
@@ -387,6 +389,9 @@ class AbstractRandomlyReplacePercentageOfEdges(
     """to be set by subclasses"""
 
     def _number_of_edges_to_replace(self, graph):
+        """
+        Simply computes the absolute number of edges to replace.
+        """
         return int(self.PERCENTAGE * graph.order / 100)
 
 

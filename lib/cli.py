@@ -3,8 +3,6 @@ Contains the main CLI application and the top-level coordination of the
 program.
 """
 
-# encoding: UTF-8
-
 from sys import argv
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from logging import INFO, DEBUG, Formatter, getLogger, debug, info
@@ -43,6 +41,9 @@ class Cli(object):
         self.best_graph = None
 
     def _init_arg_parser(self):
+        """
+        Adds all options to the argument parser.
+        """
         self.arg_parser = ArgumentParser(
             description=("graph golf challenge experiments "
                          "(http://research.nii.ac.jp/graphgolf/)"),
@@ -64,12 +65,19 @@ class Cli(object):
                                      help="degree of the graph")
 
     def _init_enhancers(self):
+        """
+        Initializes registered enhancers.
+        """
         enhancer_classes = EnhancerRegistry.enhancers
         debug("initializing enhancers %r", enhancer_classes)
         self.enhancers = [Enhancer(self.arg_parser)
                           for Enhancer in enhancer_classes]
 
     def _init_logging(self):
+        """
+        Configures our logger and add the arguments regarding logging to
+        the argument parser.
+        """
         self.arg_parser.add_argument('-d', '--debug', action='store_true',
                                      default=False,
                                      help='turn on debug messages '
@@ -82,12 +90,15 @@ class Cli(object):
         formatter = Formatter("%(levelname)s:%(process)d:%(message)s")
 
         logger = getLogger()
-        logger.name = "woods"
+        logger.name = "graphgolf"
 
         for handler in logger.handlers:
             handler.setFormatter(formatter)
 
     def _parse_args(self):
+        """
+        Parses args and configures the logger according to them.
+        """
         debug("parsing command line arguments")
 
         # display help per default:
@@ -185,7 +196,7 @@ class Cli(object):
     def _run_debug(self):
         """
         Like ``_run`` but w/o forking processes and parallelism.
-        **MAKES NO ACTUAL PROGRESS**
+        **MAKES NO ACTUAL PROGRESS** - solely for debugging purposes.
         """
         report_queue = Manager().Queue()
         while True:

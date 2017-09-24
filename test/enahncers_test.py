@@ -1,3 +1,7 @@
+"""
+Tests enhancer operations.
+"""
+
 from itertools import combinations
 
 from test import BaseTest
@@ -8,7 +12,7 @@ from lib.enhancers import Registry
 
 class GolfGraphTest(BaseTest):
     """
-    Tests various enhancer operations.
+    See module docstring.
     """
 
     def assert_all_edges_used(self, graph):

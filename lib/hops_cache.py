@@ -1,5 +1,5 @@
 """
-See ``HopsCace``.
+See docstring of class ``HopsCace``.
 """
 
 class HopsCache(object):
@@ -16,7 +16,7 @@ class HopsCache(object):
     def __init__(self, order):
         """
         ``order`` is the order of the graph, which we need for
-        pre-allocation
+        pre-allocation.
         """
 
         self._data = [

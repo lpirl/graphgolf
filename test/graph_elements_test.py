@@ -1,3 +1,7 @@
+"""
+Tests various operations of graph elements.
+"""
+
 from itertools import permutations, combinations
 from copy import deepcopy
 from pickle import loads, dumps
@@ -7,15 +11,22 @@ from lib.graph_elements import GolfGraph, Vertex, GraphPartitionedError
 
 class GolfGraphTest(BaseTest):
     """
-    Tests various graph operations.
+    See module docstring.
     """
 
     @staticmethod
     def unconnected_graph():
+        """
+        Returns a unconnected graph (that, according to its configuration,
+        could have edges, however).
+        """
         return GolfGraph(32, 4)
 
     @staticmethod
     def line_graph():
+        """
+        Returns a graph with two vertices connected.
+        """
         graph = GolfGraph(3, 2)
         vertex0 = graph.vertices[0]
         vertex1 = graph.vertices[1]
@@ -29,6 +40,10 @@ class GolfGraphTest(BaseTest):
 
     @staticmethod
     def triangle_graph():
+        """
+        Returns a graph with three vertices, connected as a "circle"
+        (think: triangle).
+        """
         graph = GolfGraph(3, 2)
         vertices = graph.vertices
         edges = ((0, 1), (1, 2), (2, 0))
@@ -41,6 +56,10 @@ class GolfGraphTest(BaseTest):
 
     @staticmethod
     def rectangle_graph():
+        """
+        Returns a graph with four vertices, connected as a "circle"
+        (think: rectangle).
+        """
         graph = GolfGraph(4, 2)
         vertices = graph.vertices
         edges = ((0, 1), (1, 2), (2, 3), (3, 0))
@@ -53,6 +72,10 @@ class GolfGraphTest(BaseTest):
 
     @staticmethod
     def some_valid_graphs():
+        """
+        Returns a bunch of graphs with valid combinations of order and
+        degree.
+        """
         orders = (3, 4, 32, 33)
         degrees = (2, 3, 4, 32, 33)
         for order in orders:
@@ -107,10 +130,6 @@ class GolfGraphTest(BaseTest):
         Tests random vertex connections for a whole bunch of graphs with
         common but also weird combinations of order and degree.
         """
-
-        # some common cases: negative, zero, odd, even, small, big
-        orders = (3, 4, 32, 33)
-        degrees = (2, 3, 4, 32, 33)
         for graph in self.some_valid_graphs():
             vertices_with_unused_ports = set()
             for vertex in graph.vertices:
@@ -134,7 +153,7 @@ class GolfGraphTest(BaseTest):
 
     def test_hops_two_vertices(self):
         """
-        Asserts shortest path computation for graph with two vertices.
+        Tests shortest path computation for graph with two vertices.
         """
         graph = GolfGraph(2, 2)
         graph.add_as_many_random_edges_as_possible()
@@ -143,7 +162,7 @@ class GolfGraphTest(BaseTest):
 
     def test_hops_line(self):
         """
-        Asserts shortest path computation for a 'line graph' with 3 vertices.
+        Tests shortest path computation for a 'line graph' with 3 vertices.
         """
         graph = self.line_graph()
         graph.analyze()
@@ -155,7 +174,7 @@ class GolfGraphTest(BaseTest):
 
     def test_hops_triangle(self):
         """
-        Asserts shortest path computation for a 'triangle graph'.
+        Tests shortest path computation for a 'triangle graph'.
         """
         graph = self.triangle_graph()
         graph.analyze()
@@ -165,7 +184,7 @@ class GolfGraphTest(BaseTest):
 
     def test_hops_fully_connected(self):
         """
-        Asserts shortest path computation for some fully connected graphs.
+        Tests shortest path computation for some fully connected graphs.
         """
         orders_degrees = ((5, 4), (10, 9), (10, 11))
         for order, degree in orders_degrees:
@@ -206,7 +225,8 @@ class GolfGraphTest(BaseTest):
 
     def test_remove_edge(self):
         """
-        Tests whether removing and edge makes the path longer.
+        Tests whether removing and edge makes the path longer
+        (for the 'line graph').
         """
         graph = self.line_graph()
         vertices = graph.vertices
@@ -226,7 +246,8 @@ class GolfGraphTest(BaseTest):
 
     def test_remove_edge_rectangle(self):
         """
-        Tests whether removing and edge makes the path longer.
+        Tests whether removing and edge makes the path longer
+        (for the 'rectangle graph').
         """
         graph = self.rectangle_graph()
         vertices = graph.vertices
@@ -254,10 +275,10 @@ class GolfGraphTest(BaseTest):
             for hop_a, hop_b in zip(hops_a, hops_b):
                 self.assertNotEqual(id(hop_a), id(hop_b))
 
-        # modify a
+        # modify graph a
         graph_a.remove_edge_unsafe(vertex_a0, vertex_a1)
 
-        # assert b not modified
+        # assert graph b not modified
         self.assertIn(vertex_b1, vertex_b0.edges_to)
         self.assertIn(vertex_b0, vertex_b1.edges_to)
 
@@ -304,7 +325,7 @@ class GolfGraphTest(BaseTest):
             graph.analyze()
             unpickled = loads(dumps(graph))
 
-            # two times: 1st as unpickled, 2nd re-``analyzed``
+            # two times: 1st as unpickled, 2nd re-analyzed
             for _ in range(2):
 
                 for attr_name in ("order", "degree", "aspl", "diameter"):
@@ -337,8 +358,8 @@ class GolfGraphTest(BaseTest):
 
     def test_hops_cache_reverse_lookup(self):
         """
-        Tests for a wrong ASPL that was returned for a specific graph
-        after implementing reverse hops cache lookups.
+        Tests absence of a wrong ASPL that was returned for a specific
+        graph after implementing reverse hops cache lookups.
         """
         graph = GolfGraph(32, 5)
         edges = [

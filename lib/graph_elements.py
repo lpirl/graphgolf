@@ -11,6 +11,9 @@ from statistics import median
 from lib.hops_cache import HopsCache
 
 class GraphPartitionedError(Exception):
+    """
+    Raised when a vertex cannot be reached.
+    """
     pass
 
 
@@ -29,7 +32,7 @@ class Vertex(object):
         """
         An attribute where non-recursive path finding algorithms can
         store link to find their way back (i.e., to reconstruct the
-        path they went but didn't remember).
+        path they went but didn't record).
         """
 
         self.edges_to = deque()
@@ -57,30 +60,40 @@ class Vertex(object):
     """
 
     def __eq__(self, other):
-        """ Called very very often, avoid adding logic. """
+        """
+        Returns whether ``self`` and ``other`` have the same ID
+        (which, by our design, implies that the objects are identical).
+        Called very very often, avoid adding logic.
+        """
         assert (self.id == other.id) == (id(self) == id(other)), \
                "we don't expect to have equal but non-identical vertices!?"
         return self.id == other.id
 
     def __lt__(self, other):
         """
-        Ordering vertices can be useful for optimizations
+        Ordering vertices is used for optimizations
         (e.g, avoid the use of sets by always creating edges with
         the "smaller" vertex first).
         """
         return self.id < other.id
 
     def __str__(self):
+        """
+        For increased readability of the debug output.
+        """
         return "V-%i" % self.id
 
     def __repr__(self):
+        """
+        See docstring of ``__str__``.
+        """
         return self.__str__()
 
 
 
 class GolfGraph(object):
     """
-    A graph specifically crafted for
+    A graph class specifically crafted for
     `the graph golf challenge <http://research.nii.ac.jp/graphgolf/>`__.
 
     Partly due to the specifics of the challenge linked above, partly
@@ -105,6 +118,8 @@ class GolfGraph(object):
         # probably less used mspl) actually lowers the performance
         self.diameter = None
         self.aspl = None
+        # median shortest path length (used internally as an additional
+        # quality metric):
         self.mspl = None
 
         # If edges modified and vertices' hops caches need to be updated.
@@ -112,8 +127,8 @@ class GolfGraph(object):
         # we lack analysis data yet, that's why.
         self._dirty = True
 
-        # ``list`` because needs fast iteration
-        # tests showed, that using tuples here is a tiny bit slower
+        # ``list`` because needs fast iteration.
+        # Tests showed, that using tuples here is a tiny bit slower.
         self.vertices = [Vertex(i) for i in range(order)]
 
         self.hops_cache = HopsCache(order)
@@ -227,7 +242,7 @@ class GolfGraph(object):
 
     def remove_edge_unsafe(self, vertex_a, vertex_b):
         """
-        Removes an edge between the two given vertices w/o checking anything.
+        Removes an edge between the two given vertices w/o checking constraints.
 
         Called often, keep minimal.
         """
@@ -243,7 +258,6 @@ class GolfGraph(object):
         """
         Adds random edges to the graph, to the maximum what
          ``self.degree`` allows.
-        This implementation targets graphs with no initial edges_to.
 
         For optimization purposes, this is an terrible all-in-one method.
         """
@@ -334,8 +348,8 @@ class GolfGraph(object):
         from ``vertex_a`` to ``vertex_b`` (``vertex_a`` != ``vertex_b``).
         Returns an empty list if ``vertex_a`` and ``vertex_b`` are
         directly connected with an edge.
-        Returns ``None`` if no path between ``vertex_a`` and ``vertex_b``
-        could be found.
+        Raises ``GraphPartitionedError`` if no path between ``vertex_a``
+        and ``vertex_b`` could be found.
 
         Raises assertion errors on invalid input. We chose assertions
         because they are skipped when running the interpreter with -O.
@@ -346,7 +360,7 @@ class GolfGraph(object):
         (We could also fill caches for the reverse direction as well but
         this feels way more complicated)
 
-        Called very often, keep efficient.
+        Called very often, keep "efficient".
         """
         assert None is debug("searching shortest path between %s and %s",
                              vertex_a, vertex_b)
@@ -440,24 +454,22 @@ class GolfGraph(object):
         """
         Returns the minimum number of hops to get from ``vertex_a`` to
         ``vertex_b``.
-        Returns ``None`` if there is no connection between ``vertex_a``
-        and ``vertex_b``.
+        Raises ``GraphPartitionedError`` if no path between ``vertex_a``
+        and ``vertex_b`` could be found.
         """
         return len(self.hops(vertex_a, vertex_b)) + 1
 
     def analyze(self):
         """
-        Sets instance attributes ``aspl`` and
-        ``diameter``.
+        Sets instance attributes ``aspl`` and ``diameter``.
 
         For an unconnected graph, we return all zeros or -
         if not running in optimized mode - raise an ``AssertionError``.
-        Due to this obscure logic, it is not simply not recommended to
-        call this on unconnected graphs.
+        Due to this obscure logic, it is not recommended to call this on
+        unconnected graphs.
 
-        The implementations searches calculates just one direction per
-        combination of vertices but then sums up the path length twice
-        to avoid searching the way back as well:
+        The implementations searches just one direction per
+        combination of vertices to avoid searching the way back as well:
         (a + a_reverse + b + b_reverse + ...) / [count] ==
         (2*a + 2*b + ...) / 2[count] ==
         2 * (a + b + ...) / 2[count] ==
@@ -600,9 +612,6 @@ class GolfGraph(object):
         state["edges"] = tuple((a.id, b.id) for a, b in self.edges())
 
         debug("collecting hops caches of vertices")
-        # brutal violation of Demeter's law
-        #   a list of hops caches, one per vertex, in order
-        #   the caches itself are only ID-based
         state["hops_cache"] = self.hops_cache.ids()
 
         return state
