@@ -395,25 +395,35 @@ class AbstractRandomlyReplacePercentageOfEdges(
 #
 # register concrete classes
 #
+# Configure the number of enhancers according to your hardware (i.e.,
+# the number of processors available.)
+# To get an idea which enhancers work well/not so well/suit which phase
+# of the computation (i.e., far or close to lower bounds), see
+# ``notes.rst``.
 
+# Experiment yourself, but those enhancers did not yield satisfying
+# progress in my cases:
 #Registry.register_multiple(1)(ConnectMostDistantVertices)
 #Registry.register_multiple(1)(RandomlyRelinkMostDistantVertices)
 #Registry.register_multiple(1)(RandomlyRelinkAllInTooLongPaths)
-Registry.register_multiple(2)(RandomlyRelinkMostDistantInTooLongPaths)
+#Registry.register_multiple(1)(RandomlyRelinkMostDistantInTooLongPaths)
 
-#@Registry.register_multiple(1)
+@Registry.register_multiple(1)
 class RandomlyReplaceOneEdge(AbstractRandomlyReplaceRandomEdges):
     """ See ``AbstractRandomlyReplaceRandomEdges``. """
     NUMBER_OF_EDGES_TO_REPLACE = 1
 
-@Registry.register_multiple(4)
+@Registry.register_multiple(1)
 class RandomlyReplaceTwoEdges(AbstractRandomlyReplaceRandomEdges):
     """ See ``AbstractRandomlyReplaceRandomEdges``. """
     NUMBER_OF_EDGES_TO_REPLACE = 2
 
-@Registry.register_multiple(2)
-class  RandomlyReplaceTenPercentEdges(
-        AbstractRandomlyReplacePercentageOfEdges
-):
-    """ See super class' docstring. """
-    PERCENTAGE = 10
+@Registry.register_multiple(1)
+class RandomlyReplaceFourEdges(AbstractRandomlyReplaceRandomEdges):
+    """ See ``AbstractRandomlyReplaceRandomEdges``. """
+    NUMBER_OF_EDGES_TO_REPLACE = 4
+
+@Registry.register_multiple(1)
+class RandomlyReplaceEightEdges(AbstractRandomlyReplaceRandomEdges):
+    """ See ``AbstractRandomlyReplaceRandomEdges``. """
+    NUMBER_OF_EDGES_TO_REPLACE = 8
